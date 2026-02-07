@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'export',
+    // output: 'export', // Only needed for Capacitor builds, not Vercel
     // We need to allow loading WASM files
     webpack: (config, { isServer }) => {
         // Enable WASM
