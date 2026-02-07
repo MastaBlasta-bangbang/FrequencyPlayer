@@ -1,0 +1,2 @@
+# Keep wasm build outputs in git for deployment
+package.json

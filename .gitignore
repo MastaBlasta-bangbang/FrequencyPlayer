@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+android/
+ios/
+app_backup_v1/
+.claude/
+*.md
+audio_engine/target/
+audio_engine/Cargo.lock
