@@ -72,18 +72,6 @@ export default function SessionTimer({
     const sequenceDuration = segments.reduce((sum, s) => sum + s.durationSeconds, 0);
     const effectiveDuration = mode === 'single' ? totalDuration : sequenceDuration;
 
-    // Notify parent when session status changes
-    useEffect(() => {
-        if (isActive) {
-            // If timer is running, session is not "ready to start"
-            onSessionStatusChange?.(false, null);
-        } else {
-            // Session is ready if: single mode (always ready) OR sequence mode with segments
-            const isReady = mode === 'single' || (mode === 'sequence' && segments.length > 0);
-            onSessionStatusChange?.(isReady, isReady ? startTimer : null);
-        }
-    }, [mode, segments.length, isActive, startTimer, onSessionStatusChange]);
-
     // Format time as MM:SS
     const formatTime = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
@@ -126,6 +114,18 @@ export default function SessionTimer({
         setCurrentSegmentIndex(0);
         onSessionEnd?.();
     }, [onSessionEnd]);
+
+    // Notify parent when session status changes
+    useEffect(() => {
+        if (isActive) {
+            // If timer is running, session is not "ready to start"
+            onSessionStatusChange?.(false, null);
+        } else {
+            // Session is ready if: single mode (always ready) OR sequence mode with segments
+            const isReady = mode === 'single' || (mode === 'sequence' && segments.length > 0);
+            onSessionStatusChange?.(isReady, isReady ? startTimer : null);
+        }
+    }, [mode, segments.length, isActive, startTimer, onSessionStatusChange]);
 
     // Timer tick
     useEffect(() => {
