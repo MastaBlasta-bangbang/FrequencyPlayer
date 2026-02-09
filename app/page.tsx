@@ -201,6 +201,18 @@ export default function Home() {
 
   // Smart context-aware play handler
   const togglePlay = async () => {
+      // Ensure audio context is ready and running FIRST
+      if (audioContextRef.current) {
+          if (audioContextRef.current.state === 'suspended') {
+              await audioContextRef.current.resume();
+          }
+          // Wait for it to actually be running
+          if (audioContextRef.current.state !== 'running') {
+              console.log('Audio context not running');
+              return;
+          }
+      }
+
       // If session is configured, start the session instead
       if (hasActiveSession && sessionStartHandlerRef.current && !isPlaying) {
           sessionStartHandlerRef.current();
