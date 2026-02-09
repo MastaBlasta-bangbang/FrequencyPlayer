@@ -4,20 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Page,
   Navbar,
-  Block,
   BlockTitle,
-  Button,
-  List,
-  ListItem,
-  Range,
-  Toggle,
-  Segmented,
-  SegmentedButton,
-  Card
+  Toggle
 } from 'konsta/react';
-import { Play, Square, Settings2, Waves, Dices, FlaskConical, Sparkles, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp } from 'lucide-react';
+import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
-import MicInput from '@/components/MicInput';
 import SessionTimer from '@/components/SessionTimer';
 
 // ==========================================
@@ -116,10 +107,12 @@ const STORAGE_KEY = 'meditation-templates';
 export default function Home() {
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [labMode, setLabMode] = useState(false);
   const [activeSoundPreset, setActiveSoundPreset] = useState("Healing Pad");
   const [frequencyCategory, setFrequencyCategory] = useState<FrequencyCategory>('solfeggio');
   const [frequencyAccordionOpen, setFrequencyAccordionOpen] = useState(true);
+  const [toneAccordionOpen, setToneAccordionOpen] = useState(false);
+  const [binauralAccordionOpen, setBinauralAccordionOpen] = useState(false);
+  const [customFrequency, setCustomFrequency] = useState('');
 
   // CORE PARAMS - Default to 432 Hz (Verdi A)
   const [freq, setFreq] = useState(432);
@@ -156,7 +149,7 @@ export default function Home() {
       audioContextRef.current = ctx;
 
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 4096;
+      analyser.fftSize = 2048; // Reduced from 4096 to fix stuttering
       analyserRef.current = analyser;
 
       await ctx.audioWorklet.addModule('/polyfills.js');
@@ -254,11 +247,6 @@ export default function Home() {
       }
   }, [isPlaying]);
 
-  // Handle pitch detection from mic
-  const handlePitchDetected = useCallback((frequency: number, note: string) => {
-      // Could be used to match detected pitch to a target frequency
-      // For now, just a placeholder for future features
-  }, []);
 
   const updateVal = (setter: any, type: string, val: any) => {
       setter(val);
@@ -379,11 +367,6 @@ export default function Home() {
         transparent
         centerTitle
         className="!text-slate-700"
-        right={
-          <Button clear rounded onClick={() => setLabMode(!labMode)} className="!text-slate-500">
-             {labMode ? <FlaskConical size={20} className="text-cyan-600" /> : <Settings2 size={20} />}
-          </Button>
-        }
       />
 
       {/* 1. HERO VISUALIZER */}
@@ -404,42 +387,116 @@ export default function Home() {
          </div>
       </div>
 
-      {/* 2. SOUND PRESETS */}
-      <div className="px-4 py-2">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-600 flex items-center gap-2">
-            <Sparkles size={16} className="text-cyan-600" /> Sound Presets
-          </h2>
-          <button
-            onClick={randomize}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-cyan-600 transition-colors"
-          >
-            <Dices size={14} /> Random
-          </button>
-        </div>
-        <div className="grid grid-cols-5 gap-2">
-          {SOUND_PRESETS.map(p => (
+      {/* 2. LAB SECTION - Always visible */}
+      <div className="px-4 py-3">
+        <BlockTitle className="!text-emerald-700 !font-semibold">Session</BlockTitle>
+        <SessionTimer
+            currentFrequency={freq}
+            frequencyPresets={FREQUENCY_PRESETS}
+            onFrequencyChange={loadFrequencyPreset}
+            onSessionStart={handleSessionStart}
+            onSessionEnd={handleSessionEnd}
+            className="mb-4"
+        />
+
+        {/* Templates */}
+        <BlockTitle className="!text-amber-700 !font-semibold">Templates</BlockTitle>
+        <div className="glass-card rounded-2xl p-4 mb-4">
+            {/* Save Template Button */}
             <button
-              key={p.label}
-              onClick={() => {
-                loadSoundPreset(p);
-                setFrequencyAccordionOpen(false);
-              }}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300
-                ${activeSoundPreset === p.label
-                  ? 'preset-active text-white shadow-lg scale-105'
-                  : 'glass-card text-slate-600 hover:scale-102'}`}
+                onClick={() => setShowTemplateDialog(!showTemplateDialog)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all mb-3"
             >
-              <span className="mb-1.5">
-                {PRESET_ICONS[p.icon]}
-              </span>
-              <span className="text-[10px] font-medium leading-tight text-center">{p.label}</span>
+                <Save size={18} />
+                Save Current as Template
             </button>
-          ))}
+
+            {/* Save Template Dialog */}
+            {showTemplateDialog && (
+                <div className="mb-4 p-3 bg-white rounded-xl border-2 border-amber-200 animate-in fade-in slide-in-from-top-2">
+                    <input
+                        type="text"
+                        placeholder="Template name (required)"
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        className="w-full px-3 py-2 mb-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Description (optional)"
+                        value={templateDescription}
+                        onChange={(e) => setTemplateDescription(e.target.value)}
+                        className="w-full px-3 py-2 mb-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <div className="flex gap-2">
+                        <button
+                            onClick={saveTemplate}
+                            className="flex-1 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600"
+                        >
+                            Save
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowTemplateDialog(false);
+                                setTemplateName('');
+                                setTemplateDescription('');
+                            }}
+                            className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Saved Templates List */}
+            {savedTemplates.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                        <FolderOpen size={14} />
+                        <span>Saved Templates ({savedTemplates.length})</span>
+                    </div>
+                    {savedTemplates
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map(template => (
+                            <div
+                                key={template.id}
+                                className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                            >
+                                <button
+                                    onClick={() => loadTemplate(template)}
+                                    className="flex-1 text-left min-w-0"
+                                >
+                                    <div className="font-semibold text-slate-700 text-sm truncate">
+                                        {template.name}
+                                    </div>
+                                    {template.description && (
+                                        <div className="text-xs text-slate-500 truncate">
+                                            {template.description}
+                                        </div>
+                                    )}
+                                    <div className="text-xs text-slate-400 mt-1">
+                                        {template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => deleteTemplate(template.id)}
+                                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        ))}
+                </div>
+            ) : (
+                <div className="text-center py-6 text-slate-400 text-sm">
+                    No templates saved yet
+                </div>
+            )}
         </div>
       </div>
 
-      {/* 3. MAIN CONTROLS (Floating Glass Dock) */}
+      {/* 3. SETTINGS ACCORDION (Floating Glass Dock) */}
       <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent pointer-events-none">
 
          {/* Play Button - More opaque background */}
@@ -455,61 +512,105 @@ export default function Home() {
             </button>
          </div>
 
-         {/* Accordion Toggle Bar */}
-         {!frequencyAccordionOpen && (
-            <div className="flex justify-center mb-2 pointer-events-auto">
+         {/* Accordion Toggle Bars (when all closed) */}
+         {!frequencyAccordionOpen && !toneAccordionOpen && !binauralAccordionOpen && (
+            <div className="flex justify-center gap-2 mb-2 pointer-events-auto">
                <button
                   onClick={() => setFrequencyAccordionOpen(true)}
-                  className="px-6 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-2 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all"
+                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all text-sm font-medium"
                >
-                  <span className="text-sm font-medium">Frequencies</span>
-                  <ChevronUp size={16} />
+                  Frequencies <ChevronUp size={14} />
+               </button>
+               <button
+                  onClick={() => setToneAccordionOpen(true)}
+                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-cyan-600 hover:border-cyan-300 transition-all text-sm font-medium"
+               >
+                  Tone <ChevronUp size={14} />
+               </button>
+               <button
+                  onClick={() => setBinauralAccordionOpen(true)}
+                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 transition-all text-sm font-medium"
+               >
+                  Binaural <ChevronUp size={14} />
                </button>
             </div>
          )}
 
-         {/* Frequency Accordion Content */}
+         {/* FREQUENCIES ACCORDION */}
          {frequencyAccordionOpen && (
-            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300">
-               {/* Frequency Category Tabs */}
-               <div className="flex justify-center gap-2 mb-3 pointer-events-auto">
-                  {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
-                     <button
-                        key={cat}
-                        onClick={() => setFrequencyCategory(cat)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300
-                        ${frequencyCategory === cat
-                           ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg'
-                           : 'glass-card text-slate-500 hover:text-violet-600'}`}
-                     >
-                        {cat}
-                     </button>
-                  ))}
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
+               <div className="glass-card rounded-2xl p-4 mb-2">
+                  {/* Frequency Category Tabs */}
+                  <div className="flex justify-center gap-2 mb-3">
+                     {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
+                        <button
+                           key={cat}
+                           onClick={() => setFrequencyCategory(cat)}
+                           className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300
+                           ${frequencyCategory === cat
+                              ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg'
+                              : 'bg-slate-100 text-slate-500 hover:text-violet-600'}`}
+                        >
+                           {cat}
+                        </button>
+                     ))}
+                  </div>
+
+                  {/* Frequency Presets (Horizontal Scroll) */}
+                  <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x">
+                     {FREQUENCY_PRESETS
+                        .filter(f => f.category === frequencyCategory)
+                        .map(f => (
+                        <button
+                           key={f.label}
+                           onClick={() => loadFrequencyPreset(f.frequency)}
+                           className={`snap-center shrink-0 w-16 h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-300
+                           ${freq === f.frequency
+                              ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-lg shadow-violet-200/50'
+                              : 'bg-white border-slate-200 text-slate-500 hover:border-violet-200'}`}
+                        >
+                           <span className="text-lg font-bold">{f.label}</span>
+                           <span className="text-[9px] uppercase tracking-widest opacity-70">
+                              {f.description || 'Hz'}
+                           </span>
+                        </button>
+                     ))}
+                  </div>
+
+                  {/* Custom Frequency Input (Special tab only) */}
+                  {frequencyCategory === 'special' && (
+                     <div className="mt-3 pt-3 border-t border-slate-200">
+                        <label className="text-xs text-slate-500 mb-2 block">Custom Frequency</label>
+                        <div className="flex gap-2">
+                           <input
+                              type="number"
+                              min="20"
+                              max="2000"
+                              step="0.1"
+                              value={customFrequency}
+                              onChange={(e) => setCustomFrequency(e.target.value)}
+                              placeholder="Enter Hz..."
+                              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                           />
+                           <button
+                              onClick={() => {
+                                 const val = parseFloat(customFrequency);
+                                 if (!isNaN(val) && val >= 20 && val <= 2000) {
+                                    loadFrequencyPreset(val);
+                                    setCustomFrequency('');
+                                 }
+                              }}
+                              className="px-4 py-2 bg-violet-500 text-white rounded-lg font-medium hover:bg-violet-600"
+                           >
+                              Set
+                           </button>
+                        </div>
+                     </div>
+                  )}
                </div>
 
-               {/* Frequency Presets (Horizontal Scroll) */}
-               <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x pointer-events-auto">
-                  {FREQUENCY_PRESETS
-                     .filter(f => f.category === frequencyCategory)
-                     .map(f => (
-                     <button
-                        key={f.label}
-                        onClick={() => loadFrequencyPreset(f.frequency)}
-                        className={`snap-center shrink-0 w-16 h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-300
-                        ${freq === f.frequency
-                           ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-lg shadow-violet-200/50'
-                           : 'glass-card border-white/50 text-slate-500 hover:border-violet-200'}`}
-                     >
-                        <span className="text-lg font-bold">{f.label}</span>
-                        <span className="text-[9px] uppercase tracking-widest opacity-70">
-                           {f.description || 'Hz'}
-                        </span>
-                     </button>
-                  ))}
-               </div>
-
-               {/* Close accordion bar */}
-               <div className="flex justify-center pointer-events-auto">
+               {/* Close button */}
+               <div className="flex justify-center">
                   <button
                      onClick={() => setFrequencyAccordionOpen(false)}
                      className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
@@ -519,253 +620,92 @@ export default function Home() {
                </div>
             </div>
          )}
-      </div>
 
-      {/* 4. LAB MODE (Hidden by default) */}
-      {labMode && (
-        <div className="px-4 animate-in fade-in slide-in-from-bottom-10 duration-500" onClick={() => setFrequencyAccordionOpen(false)}>
-            {/* Session Timer */}
-            <BlockTitle className="!text-emerald-700 !font-semibold">Session</BlockTitle>
-            <SessionTimer
-                currentFrequency={freq}
-                frequencyPresets={FREQUENCY_PRESETS}
-                onFrequencyChange={loadFrequencyPreset}
-                onSessionStart={handleSessionStart}
-                onSessionEnd={handleSessionEnd}
-                className="mb-4"
-            />
+         {/* TONE ACCORDION (Sound Presets) */}
+         {toneAccordionOpen && (
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
+               <div className="glass-card rounded-2xl p-4 mb-2">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Tone</h3>
+                  <div className="grid grid-cols-5 gap-2">
+                     {SOUND_PRESETS.map(p => (
+                        <button
+                           key={p.label}
+                           onClick={() => loadSoundPreset(p)}
+                           className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300
+                           ${activeSoundPreset === p.label
+                              ? 'preset-active text-white shadow-lg scale-105'
+                              : 'bg-white text-slate-600 hover:scale-102 border border-slate-200'}`}
+                        >
+                           <span className="mb-1.5">
+                              {PRESET_ICONS[p.icon]}
+                           </span>
+                           <span className="text-[10px] font-medium leading-tight text-center">{p.label}</span>
+                        </button>
+                     ))}
+                  </div>
+               </div>
 
-            {/* Templates */}
-            <BlockTitle className="!text-amber-700 !font-semibold">Templates</BlockTitle>
-            <div className="glass-card rounded-2xl p-4 mb-4">
-                {/* Save Template Button */}
-                <button
-                    onClick={() => setShowTemplateDialog(!showTemplateDialog)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all mb-3"
-                >
-                    <Save size={18} />
-                    Save Current as Template
-                </button>
-
-                {/* Save Template Dialog */}
-                {showTemplateDialog && (
-                    <div className="mb-4 p-3 bg-white rounded-xl border-2 border-amber-200 animate-in fade-in slide-in-from-top-2">
-                        <input
-                            type="text"
-                            placeholder="Template name (required)"
-                            value={templateName}
-                            onChange={(e) => setTemplateName(e.target.value)}
-                            className="w-full px-3 py-2 mb-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Description (optional)"
-                            value={templateDescription}
-                            onChange={(e) => setTemplateDescription(e.target.value)}
-                            className="w-full px-3 py-2 mb-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <div className="flex gap-2">
-                            <button
-                                onClick={saveTemplate}
-                                className="flex-1 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600"
-                            >
-                                Save
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowTemplateDialog(false);
-                                    setTemplateName('');
-                                    setTemplateDescription('');
-                                }}
-                                className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Saved Templates List */}
-                {savedTemplates.length > 0 ? (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                            <FolderOpen size={14} />
-                            <span>Saved Templates ({savedTemplates.length})</span>
-                        </div>
-                        {savedTemplates
-                            .sort((a, b) => b.timestamp - a.timestamp)
-                            .map(template => (
-                                <div
-                                    key={template.id}
-                                    className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
-                                >
-                                    <button
-                                        onClick={() => loadTemplate(template)}
-                                        className="flex-1 text-left min-w-0"
-                                    >
-                                        <div className="font-semibold text-slate-700 text-sm truncate">
-                                            {template.name}
-                                        </div>
-                                        {template.description && (
-                                            <div className="text-xs text-slate-500 truncate">
-                                                {template.description}
-                                            </div>
-                                        )}
-                                        <div className="text-xs text-slate-400 mt-1">
-                                            {template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => deleteTemplate(template.id)}
-                                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-6 text-slate-400 text-sm">
-                        No templates saved yet
-                    </div>
-                )}
+               {/* Close button */}
+               <div className="flex justify-center">
+                  <button
+                     onClick={() => setToneAccordionOpen(false)}
+                     className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                     Hide ↓
+                  </button>
+               </div>
             </div>
+         )}
 
-            {/* Microphone Input */}
-            <BlockTitle className="!text-rose-700 !font-semibold">Tuner</BlockTitle>
-            <MicInput
-                onPitchDetected={handlePitchDetected}
-                className="mb-4"
-            />
-
-            <BlockTitle className="!text-cyan-700 !font-semibold">Lab Controls</BlockTitle>
-
-            <div className="glass-card rounded-2xl p-4 mb-4">
-                <div className="flex justify-between items-center mb-4">
-                     <span className="text-slate-700 font-medium">Oscillator</span>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>Fine Tune</span>
-                            <span className="font-mono text-cyan-600 font-semibold">{freq.toFixed(1)} Hz</span>
-                        </div>
-                        <input
-                            type="range"
-                            value={freq}
-                            min={40}
-                            max={1000}
-                            step={0.1}
-                            onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setFreq(v);
-                                if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_FREQ', freq: v });
-                            }}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <BlockTitle className="!text-emerald-700 !font-semibold">Binaural Entrainment</BlockTitle>
-            <div className="glass-card rounded-2xl p-4 mb-4">
-                <div className="flex justify-between items-center mb-4">
-                     <span className="text-slate-700 font-medium">Brainwave Target</span>
+         {/* BINAURAL ACCORDION */}
+         {binauralAccordionOpen && (
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
+               <div className="glass-card rounded-2xl p-4 mb-2">
+                  <div className="flex justify-between items-center mb-4">
+                     <span className="text-sm font-semibold text-slate-700">Binaural Entrainment</span>
                      <Toggle
                         checked={binauralOn}
                         onChange={() => {
-                            const next = !binauralOn;
-                            setBinauralOn(next);
-                            if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
+                           const next = !binauralOn;
+                           setBinauralOn(next);
+                           if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
                         }}
                      />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                    {BRAINWAVES.map(w => (
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     {BRAINWAVES.map(w => (
                         <button
-                            key={w.label}
-                            onClick={() => {
-                                setBeatFreq(w.freq);
-                                if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
-                            }}
-                            className={`p-3 rounded-xl border-2 text-left transition-all duration-300
-                            ${beatFreq === w.freq
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-lg'
-                                : 'glass-card border-white/50 text-slate-600'}`}
+                           key={w.label}
+                           onClick={() => {
+                              setBeatFreq(w.freq);
+                              if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
+                           }}
+                           className={`p-3 rounded-xl border-2 text-left transition-all duration-300
+                           ${beatFreq === w.freq
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-lg'
+                              : 'bg-white border-slate-200 text-slate-600'}`}
                         >
-                            <div className="text-xs font-bold uppercase tracking-wider">{w.label}</div>
-                            <div className="text-lg font-light">{w.freq} Hz</div>
-                            <div className="text-[10px] opacity-70">{w.desc}</div>
+                           <div className="text-xs font-bold uppercase tracking-wider">{w.label}</div>
+                           <div className="text-lg font-light">{w.freq} Hz</div>
+                           <div className="text-[10px] opacity-70">{w.desc}</div>
                         </button>
-                    ))}
-                </div>
-            </div>
+                     ))}
+                  </div>
+               </div>
 
-            <BlockTitle className="!text-pink-700 !font-semibold">Atmosphere</BlockTitle>
-            <div className="glass-card rounded-2xl p-4">
-                <div className="space-y-5">
-                    <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>Reverb</span>
-                            <span className="font-mono">{(reverb * 100).toFixed(0)}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            value={reverb}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setReverb(v);
-                                if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_FX', reverb: v, delay });
-                            }}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-pink-500"
-                        />
-                    </div>
-                    <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>FM Depth</span>
-                            <span className="font-mono">{(fmDepth * 100).toFixed(0)}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            value={fmDepth}
-                            min={0}
-                            max={2}
-                            step={0.01}
-                            onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setFmDepth(v);
-                                if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_FM', ratio: fmRatio, depth: v });
-                            }}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                        />
-                    </div>
-                    <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>Delay</span>
-                            <span className="font-mono">{(delay * 100).toFixed(0)}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            value={delay}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setDelay(v);
-                                if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_FX', reverb, delay: v });
-                            }}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        />
-                    </div>
-                </div>
+               {/* Close button */}
+               <div className="flex justify-center">
+                  <button
+                     onClick={() => setBinauralAccordionOpen(false)}
+                     className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                     Hide ↓
+                  </button>
+               </div>
             </div>
-        </div>
-      )}
+         )}
+      </div>
+
 
       {/* spacer for bottom dock - ensures content isn't hidden behind fixed dock */}
       <div className="h-64" />
