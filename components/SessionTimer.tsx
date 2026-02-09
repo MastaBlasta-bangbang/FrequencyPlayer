@@ -54,7 +54,7 @@ export default function SessionTimer({
     className = '',
 }: SessionTimerProps) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [mode, setMode] = useState<SessionMode>('single');
+    const [mode, setMode] = useState<SessionMode>('sequence'); // Default to sequence only
     const [totalDuration, setTotalDuration] = useState(180); // 3 minutes default
     const [segments, setSegments] = useState<Segment[]>([]);
     const [autoDistribute, setAutoDistribute] = useState(false);
@@ -293,64 +293,7 @@ export default function SessionTimer({
             {/* Expanded content */}
             {isExpanded && (
                 <div className="px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {/* Mode toggle */}
-                    <div className="flex bg-slate-100 rounded-xl p-1">
-                        <button
-                            onClick={() => setMode('single')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                                mode === 'single'
-                                    ? 'bg-white text-slate-800 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <Clock size={16} /> Single
-                        </button>
-                        <button
-                            onClick={() => setMode('sequence')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                                mode === 'sequence'
-                                    ? 'bg-white text-slate-800 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            <ListMusic size={16} /> Sequence
-                        </button>
-                    </div>
-
-                    {/* Single mode: Duration presets */}
-                    {mode === 'single' && (
-                        <div>
-                            <label className="text-xs text-slate-500 mb-2 block">Duration</label>
-                            <div className="flex gap-2 mb-3">
-                                {DURATION_PRESETS.map(d => (
-                                    <button
-                                        key={d.label}
-                                        onClick={() => setTotalDuration(d.seconds)}
-                                        className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                                            totalDuration === d.seconds
-                                                ? 'bg-emerald-500 text-white shadow-lg'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
-                                    >
-                                        {d.label}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="120"
-                                    value={Math.floor(totalDuration / 60)}
-                                    onChange={(e) => setTotalDuration(parseInt(e.target.value || '1') * 60)}
-                                    className="w-20 bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-sm"
-                                />
-                                <span className="text-sm text-slate-500">minutes</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sequence mode: Builder */}
+                    {/* Sequence Builder - Mode only */}
                     {mode === 'sequence' && (
                         <div className="space-y-3">
                             {/* Current sequence */}

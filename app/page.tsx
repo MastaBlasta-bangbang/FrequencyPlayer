@@ -121,6 +121,7 @@ export default function Home() {
   // Settings modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
+  const [sessionTimerEnabled, setSessionTimerEnabled] = useState(false);
 
   // Smart Play Button - track if session is ready
   const [hasActiveSession, setHasActiveSession] = useState(false);
@@ -643,7 +644,7 @@ export default function Home() {
                               ))}
                            </div>
 
-                           {/* Frequency Presets - Smaller */}
+                           {/* Frequency Presets - Wider for text */}
                            <div className="flex gap-2 overflow-x-auto pb-2 px-1 no-scrollbar snap-x">
                               {FREQUENCY_PRESETS
                                  .filter(f => f.category === frequencyCategory)
@@ -651,13 +652,13 @@ export default function Home() {
                                  <button
                                     key={f.label}
                                     onClick={() => loadFrequencyPreset(f.frequency)}
-                                    className={`snap-center shrink-0 w-14 h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all duration-300
+                                    className={`snap-center shrink-0 w-20 h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 px-1
                                     ${freq === f.frequency
                                        ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-md'
                                        : 'bg-white border-slate-200 text-slate-500 hover:border-violet-200'}`}
                                  >
                                     <span className="text-base font-bold">{f.label}</span>
-                                    <span className="text-[8px] uppercase tracking-widest opacity-70">
+                                    <span className="text-[8px] uppercase tracking-wider opacity-70 text-center leading-tight">
                                        {f.description || 'Hz'}
                                     </span>
                                  </button>
@@ -698,7 +699,7 @@ export default function Home() {
                            {/* Binaural Entrainment - Integrated */}
                            <div className="pt-2 border-t border-slate-200">
                               <div className="flex items-center justify-between mb-2">
-                                 <label className="text-xs font-semibold text-slate-700">Binaural Entrainment</label>
+                                 <label className="text-sm font-semibold text-slate-700">Binaural Entrainment</label>
                                  <Toggle
                                     checked={binauralOn}
                                     onChange={() => {
@@ -717,13 +718,13 @@ export default function Home() {
                                              setBeatFreq(w.freq);
                                              if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
                                           }}
-                                          className={`p-1.5 rounded-lg border text-left transition-all duration-300
+                                          className={`p-2 rounded-lg border text-left transition-all duration-300
                                           ${beatFreq === w.freq
                                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-sm'
                                              : 'bg-white border-slate-200 text-slate-600'}`}
                                        >
-                                          <div className="text-[10px] font-bold">{w.label} {w.freq} Hz</div>
-                                          <div className="text-[9px] opacity-70">{w.desc}</div>
+                                          <div className="text-xs font-bold">{w.label} {w.freq} Hz</div>
+                                          <div className="text-xs opacity-70">{w.desc}</div>
                                        </button>
                                     ))}
                                  </div>
@@ -778,7 +779,7 @@ export default function Home() {
                         <div className="space-y-2 mt-2">
                            <div className="flex items-center justify-between mb-2">
                               <span className="text-xs text-slate-600">Enable Timer</span>
-                              <Toggle checked={false} onChange={() => {}} />
+                              <Toggle checked={sessionTimerEnabled} onChange={() => setSessionTimerEnabled(!sessionTimerEnabled)} />
                            </div>
                            <div className="flex gap-1.5">
                               {[1, 3, 5, 10].map(min => (
