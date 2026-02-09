@@ -194,20 +194,40 @@ export default function Home() {
       node.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: beatFreq });
   };
 
+  // Initialize audio on mount
+  useEffect(() => {
+      initAudio();
+  }, []);
+
   // Smart context-aware play handler
-  const togglePlay = () => {
+  const togglePlay = async () => {
       // If session is configured, start the session instead
       if (hasActiveSession && sessionStartHandlerRef.current && !isPlaying) {
           sessionStartHandlerRef.current();
           return;
       }
 
-      // Otherwise, manual play (continuous)
-      if (!audioContextRef.current) { initAudio(); return; }
-      if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
-      const node = workletNodeRef.current;
-      if (!node) return;
+      // Ensure audio is initialized
+      if (!audioContextRef.current) {
+          await initAudio();
+          // Wait a bit for WASM to be ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
+      // Resume audio context if suspended (browser requirement)
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+      }
+
+      const node = workletNodeRef.current;
+
+      // Check if system is ready
+      if (!node || !isReady) {
+          console.log('Audio system not ready yet, please wait...');
+          return;
+      }
+
+      // Toggle play/stop
       if (isPlaying) {
           node.port.postMessage({ type: 'NOTE_OFF' });
           setIsPlaying(false);
@@ -525,17 +545,31 @@ export default function Home() {
          <div className="flex flex-col items-center -mt-8 mb-3 pointer-events-auto">
             <button
                 onClick={togglePlay}
+                disabled={!isReady}
                 className={`play-button-landscape w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
-                ${isPlaying
+                ${!isReady
+                    ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-wait'
+                    : isPlaying
                     ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-cyan-400 shadow-cyan-200/50 text-white'
                     : hasActiveSession
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 shadow-emerald-200/50 text-white hover:scale-105'
                     : 'bg-white/95 border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-500'}`}
             >
-                {isPlaying ? <Square size={22} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
+                {!isReady ? (
+                    <div className="animate-spin">⏳</div>
+                ) : isPlaying ? (
+                    <Square size={22} fill="currentColor" />
+                ) : (
+                    <Play size={28} fill="currentColor" className="ml-1" />
+                )}
             </button>
-            {/* Context indicator */}
-            {hasActiveSession && !isPlaying && (
+            {/* Context indicators */}
+            {!isReady && (
+                <div className="mt-2 px-3 py-1 bg-slate-400/90 backdrop-blur-sm rounded-full text-white text-xs font-medium shadow-lg animate-pulse">
+                    Initializing...
+                </div>
+            )}
+            {hasActiveSession && !isPlaying && isReady && (
                 <div className="mt-2 px-3 py-1 bg-emerald-500/90 backdrop-blur-sm rounded-full text-white text-xs font-medium shadow-lg animate-in fade-in slide-in-from-bottom-2">
                     Start Session
                 </div>
