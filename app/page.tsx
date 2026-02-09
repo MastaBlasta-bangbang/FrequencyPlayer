@@ -109,20 +109,18 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeSoundPreset, setActiveSoundPreset] = useState("Healing Pad");
   const [frequencyCategory, setFrequencyCategory] = useState<FrequencyCategory>('solfeggio');
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false); // CLOSED by default!
   const [customFrequency, setCustomFrequency] = useState('');
 
-  // Collapsible sub-sections (Phase 2)
-  const [frequenciesExpanded, setFrequenciesExpanded] = useState(true);
+  // Collapsible sub-sections - ALL CLOSED by default
+  const [frequenciesExpanded, setFrequenciesExpanded] = useState(false);
   const [toneExpanded, setToneExpanded] = useState(false);
-  const [binauralExpanded, setBinauralExpanded] = useState(false);
   const [sessionTimerExpanded, setSessionTimerExpanded] = useState(false);
   const [sequenceBuilderExpanded, setSequenceBuilderExpanded] = useState(false);
-  const [templatesExpanded, setTemplatesExpanded] = useState(false);
 
   // Settings modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [sessionTimerEnabled, setSessionTimerEnabled] = useState(false); // OFF by default!
+  const [showPresetSelector, setShowPresetSelector] = useState(false);
 
   // Smart Play Button - track if session is ready
   const [hasActiveSession, setHasActiveSession] = useState(false);
@@ -485,10 +483,35 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Default Frequency */}
+              {/* Default START Frequency */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Frequency</label>
-                <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default START Frequency</label>
+                <div className="flex gap-2">
+                  <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" defaultValue={freq} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <button onClick={() => setShowPresetSelector(!showPresetSelector)} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">
+                    Select from Presets
+                  </button>
+                </div>
+                {showPresetSelector && (
+                  <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
+                    {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
+                      <div key={cat} className="mb-3">
+                        <div className="text-xs font-semibold text-slate-600 uppercase mb-1">{cat}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {FREQUENCY_PRESETS.filter(f => f.category === cat).map(f => (
+                            <button
+                              key={f.label}
+                              onClick={() => { loadFrequencyPreset(f.frequency); setShowPresetSelector(false); }}
+                              className="px-2 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-violet-100"
+                            >
+                              {f.label} ({f.frequency}Hz)
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Add Custom Frequency */}
@@ -507,11 +530,6 @@ export default function Home() {
                 <Toggle checked={binauralOn} onChange={() => setBinauralOn(!binauralOn)} />
               </div>
 
-              {/* Session Timer Enabled */}
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700">Enable Session Timer</label>
-                <Toggle checked={sessionTimerEnabled} onChange={() => setSessionTimerEnabled(!sessionTimerEnabled)} />
-              </div>
             </div>
 
             <button onClick={() => setShowSettingsModal(false)} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900">
@@ -676,6 +694,41 @@ export default function Home() {
                                  </div>
                               </div>
                            )}
+
+                           {/* Binaural Entrainment - Integrated */}
+                           <div className="pt-2 border-t border-slate-200">
+                              <div className="flex items-center justify-between mb-2">
+                                 <label className="text-xs font-semibold text-slate-700">Binaural Entrainment</label>
+                                 <Toggle
+                                    checked={binauralOn}
+                                    onChange={() => {
+                                       const next = !binauralOn;
+                                       setBinauralOn(next);
+                                       if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
+                                    }}
+                                 />
+                              </div>
+                              {binauralOn && (
+                                 <div className="grid grid-cols-2 gap-1.5">
+                                    {BRAINWAVES.map(w => (
+                                       <button
+                                          key={w.label}
+                                          onClick={() => {
+                                             setBeatFreq(w.freq);
+                                             if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
+                                          }}
+                                          className={`p-1.5 rounded-lg border text-left transition-all duration-300
+                                          ${beatFreq === w.freq
+                                             ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-sm'
+                                             : 'bg-white border-slate-200 text-slate-600'}`}
+                                       >
+                                          <div className="text-[10px] font-bold">{w.label} {w.freq} Hz</div>
+                                          <div className="text-[9px] opacity-70">{w.desc}</div>
+                                       </button>
+                                    ))}
+                                 </div>
+                              )}
+                           </div>
                         </div>
                      )}
                   </div>
@@ -711,77 +764,33 @@ export default function Home() {
                      )}
                   </div>
 
-                  {/* 3. BINAURAL - Collapsible */}
+                  {/* 3. SESSION TIMER - Always visible with toggle */}
                   <div className="glass-card rounded-xl p-3">
                      <button
-                        onClick={() => setBinauralExpanded(!binauralExpanded)}
+                        onClick={() => setSessionTimerExpanded(!sessionTimerExpanded)}
                         className="w-full flex items-center justify-between"
                      >
-                        <h3 className="text-sm font-semibold text-slate-700">Binaural</h3>
-                        {binauralExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        <h3 className="text-sm font-semibold text-slate-700">Session Timer</h3>
+                        {sessionTimerExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                      </button>
 
-                     {binauralExpanded && (
+                     {sessionTimerExpanded && (
                         <div className="space-y-2 mt-2">
-                           <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-600">Enable</span>
-                              <Toggle
-                                 checked={binauralOn}
-                                 onChange={() => {
-                                    const next = !binauralOn;
-                                    setBinauralOn(next);
-                                    if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
-                                 }}
-                              />
+                           <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-slate-600">Enable Timer</span>
+                              <Toggle checked={false} onChange={() => {}} />
                            </div>
-                           <div className="grid grid-cols-2 gap-1.5">
-                              {BRAINWAVES.map(w => (
-                                 <button
-                                    key={w.label}
-                                    onClick={() => {
-                                       setBeatFreq(w.freq);
-                                       if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
-                                    }}
-                                    className={`p-2 rounded-lg border-2 text-left transition-all duration-300
-                                    ${beatFreq === w.freq
-                                       ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-md'
-                                       : 'bg-white border-slate-200 text-slate-600'}`}
-                                 >
-                                    <div className="text-[10px] font-bold uppercase tracking-wider">{w.label}</div>
-                                    <div className="text-base font-light">{w.freq} Hz</div>
-                                    <div className="text-[9px] opacity-70">{w.desc}</div>
+                           <div className="flex gap-1.5">
+                              {[1, 3, 5, 10].map(min => (
+                                 <button key={min} className="flex-1 py-2 bg-slate-100 hover:bg-emerald-500 hover:text-white rounded-lg text-xs font-medium transition-colors">
+                                    {min}m
                                  </button>
                               ))}
                            </div>
+                           <input type="number" min="1" placeholder="Custom minutes" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />
                         </div>
                      )}
                   </div>
-
-                  {/* 4. SESSION TIMER - Simple timer (OFF by default) */}
-                  {sessionTimerEnabled && (
-                     <div className="glass-card rounded-xl p-3">
-                        <button
-                           onClick={() => setSessionTimerExpanded(!sessionTimerExpanded)}
-                           className="w-full flex items-center justify-between"
-                        >
-                           <h3 className="text-sm font-semibold text-slate-700">Session Timer</h3>
-                           {sessionTimerExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-
-                        {sessionTimerExpanded && (
-                           <div className="space-y-2 mt-2">
-                              <p className="text-xs text-slate-500">Quick timer - coming soon!</p>
-                              <div className="flex gap-1.5">
-                                 {[1, 3, 5, 10].map(min => (
-                                    <button key={min} className="flex-1 py-2 bg-slate-100 hover:bg-emerald-500 hover:text-white rounded-lg text-xs font-medium transition-colors">
-                                       {min}m
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-                        )}
-                     </div>
-                  )}
 
                   {/* 5. SEQUENCE BUILDER - Full SessionTimer */}
                   <div className="glass-card rounded-xl p-3">
