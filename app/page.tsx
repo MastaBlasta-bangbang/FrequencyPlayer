@@ -7,7 +7,7 @@ import {
   BlockTitle,
   Toggle
 } from 'konsta/react';
-import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import SessionTimer from '@/components/SessionTimer';
 
@@ -116,6 +116,13 @@ export default function Home() {
   const [frequenciesExpanded, setFrequenciesExpanded] = useState(true);
   const [toneExpanded, setToneExpanded] = useState(false);
   const [binauralExpanded, setBinauralExpanded] = useState(false);
+  const [sessionTimerExpanded, setSessionTimerExpanded] = useState(false);
+  const [sequenceBuilderExpanded, setSequenceBuilderExpanded] = useState(false);
+  const [templatesExpanded, setTemplatesExpanded] = useState(false);
+
+  // Settings modal
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [sessionTimerEnabled, setSessionTimerEnabled] = useState(false); // OFF by default!
 
   // Smart Play Button - track if session is ready
   const [hasActiveSession, setHasActiveSession] = useState(false);
@@ -437,7 +444,82 @@ export default function Home() {
         transparent
         centerTitle
         className="!text-slate-700"
+        right={
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 rounded-full hover:bg-slate-200/50 transition-colors"
+          >
+            <Settings size={20} className="text-slate-600" />
+          </button>
+        }
       />
+
+      {/* SETTINGS MODAL */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowSettingsModal(false)}>
+          <div className="glass-card rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-800">App Settings</h2>
+              <button onClick={() => setShowSettingsModal(false)} className="p-1 hover:bg-slate-200 rounded-full">
+                <ChevronDown size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Default Session Length */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Session Length</label>
+                <div className="flex gap-2">
+                  <input type="number" min="1" max="120" placeholder="Minutes" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600">Save</button>
+                </div>
+              </div>
+
+              {/* Default Tone */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Tone</label>
+                <select className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  {SOUND_PRESETS.map(p => (
+                    <option key={p.label} value={p.label}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Default Frequency */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Frequency</label>
+                <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+              </div>
+
+              {/* Add Custom Frequency */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Add Custom Frequency to Special</label>
+                <div className="flex gap-2">
+                  <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <input type="text" placeholder="Label" className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <button className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">Add</button>
+                </div>
+              </div>
+
+              {/* Binaural Always On */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-700">Binaural Always On</label>
+                <Toggle checked={binauralOn} onChange={() => setBinauralOn(!binauralOn)} />
+              </div>
+
+              {/* Session Timer Enabled */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-700">Enable Session Timer</label>
+                <Toggle checked={sessionTimerEnabled} onChange={() => setSessionTimerEnabled(!sessionTimerEnabled)} />
+              </div>
+            </div>
+
+            <button onClick={() => setShowSettingsModal(false)} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900">
+              Close Settings
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 1. HERO VISUALIZER */}
       <div className="relative w-full h-[35vh] flex flex-col items-center justify-center">
@@ -457,115 +539,6 @@ export default function Home() {
          </div>
       </div>
 
-      {/* 2. LAB SECTION - Always visible */}
-      <div className="px-4 py-3">
-        <BlockTitle className="!text-emerald-700 !font-semibold">Session</BlockTitle>
-        <SessionTimer
-            currentFrequency={freq}
-            frequencyPresets={FREQUENCY_PRESETS}
-            onFrequencyChange={loadFrequencyPreset}
-            onSessionStart={handleSessionStart}
-            onSessionEnd={handleSessionEnd}
-            onSessionStatusChange={handleSessionStatusChange}
-            className="mb-4"
-        />
-
-        {/* Templates */}
-        <BlockTitle className="!text-amber-700 !font-semibold">Templates</BlockTitle>
-        <div className="glass-card rounded-2xl p-4 mb-4">
-            {/* Save Template Button */}
-            <button
-                onClick={() => setShowTemplateDialog(!showTemplateDialog)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all mb-3"
-            >
-                <Save size={18} />
-                Save Current as Template
-            </button>
-
-            {/* Save Template Dialog */}
-            {showTemplateDialog && (
-                <div className="mb-4 p-3 bg-white rounded-xl border-2 border-amber-200 animate-in fade-in slide-in-from-top-2">
-                    <input
-                        type="text"
-                        placeholder="Template name (required)"
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
-                        className="w-full px-3 py-2 mb-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Description (optional)"
-                        value={templateDescription}
-                        onChange={(e) => setTemplateDescription(e.target.value)}
-                        className="w-full px-3 py-2 mb-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                    <div className="flex gap-2">
-                        <button
-                            onClick={saveTemplate}
-                            className="flex-1 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600"
-                        >
-                            Save
-                        </button>
-                        <button
-                            onClick={() => {
-                                setShowTemplateDialog(false);
-                                setTemplateName('');
-                                setTemplateDescription('');
-                            }}
-                            className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Saved Templates List */}
-            {savedTemplates.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                        <FolderOpen size={14} />
-                        <span>Saved Templates ({savedTemplates.length})</span>
-                    </div>
-                    {savedTemplates
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .map(template => (
-                            <div
-                                key={template.id}
-                                className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
-                            >
-                                <button
-                                    onClick={() => loadTemplate(template)}
-                                    className="flex-1 text-left min-w-0"
-                                >
-                                    <div className="font-semibold text-slate-700 text-sm truncate">
-                                        {template.name}
-                                    </div>
-                                    {template.description && (
-                                        <div className="text-xs text-slate-500 truncate">
-                                            {template.description}
-                                        </div>
-                                    )}
-                                    <div className="text-xs text-slate-400 mt-1">
-                                        {template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => deleteTemplate(template.id)}
-                                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        ))}
-                </div>
-            ) : (
-                <div className="text-center py-6 text-slate-400 text-sm">
-                    No templates saved yet
-                </div>
-            )}
-        </div>
-      </div>
 
       {/* 3. SETTINGS ACCORDION (Floating Glass Dock) */}
       <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent pointer-events-none">
