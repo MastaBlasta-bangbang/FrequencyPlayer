@@ -15,7 +15,7 @@ import {
   SegmentedButton,
   Card
 } from 'konsta/react';
-import { Play, Square, Settings2, Waves, Dices, FlaskConical, Sparkles, Leaf, AudioWaveform, Music, Landmark, Infinity } from 'lucide-react';
+import { Play, Square, Settings2, Waves, Dices, FlaskConical, Sparkles, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2 } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import MicInput from '@/components/MicInput';
 import SessionTimer from '@/components/SessionTimer';
@@ -82,6 +82,35 @@ const BRAINWAVES = [
     { label: "Beta", freq: 20.0, desc: "Focus" },
 ];
 
+// ==========================================
+// SESSION TEMPLATES
+// ==========================================
+interface SessionTemplate {
+    id: string;
+    name: string;
+    description?: string;
+    timestamp: number;
+    // Sound parameters
+    soundPreset: string;
+    freq: number;
+    cutoff: number;
+    resonance: number;
+    env: { a: number; d: number; s: number; r: number };
+    fmRatio: number;
+    fmDepth: number;
+    noise: number;
+    lfoRate: number;
+    lfoAmt: number;
+    drive: number;
+    reverb: number;
+    delay: number;
+    // Binaural
+    binauralOn: boolean;
+    beatFreq: number;
+}
+
+const STORAGE_KEY = 'meditation-templates';
+
 // SOLFEGGIO removed - now using FREQUENCY_PRESETS
 
 export default function Home() {
@@ -109,6 +138,12 @@ export default function Home() {
 
   const [binauralOn, setBinauralOn] = useState(false);
   const [beatFreq, setBeatFreq] = useState(10.0);
+
+  // Template management
+  const [savedTemplates, setSavedTemplates] = useState<SessionTemplate[]>([]);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -245,6 +280,97 @@ export default function Home() {
       loadSoundPreset(newP);
   };
 
+  // Load templates from localStorage on mount
+  useEffect(() => {
+      try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+              const templates = JSON.parse(stored) as SessionTemplate[];
+              setSavedTemplates(templates);
+          }
+      } catch (err) {
+          console.error('Failed to load templates:', err);
+      }
+  }, []);
+
+  // Save current state as template
+  const saveTemplate = () => {
+      if (!templateName.trim()) {
+          alert('Please enter a template name');
+          return;
+      }
+
+      const newTemplate: SessionTemplate = {
+          id: crypto.randomUUID(),
+          name: templateName.trim(),
+          description: templateDescription.trim() || undefined,
+          timestamp: Date.now(),
+          soundPreset: activeSoundPreset,
+          freq,
+          cutoff,
+          resonance,
+          env,
+          fmRatio,
+          fmDepth,
+          noise,
+          lfoRate,
+          lfoAmt,
+          drive,
+          reverb,
+          delay,
+          binauralOn,
+          beatFreq,
+      };
+
+      const updated = [...savedTemplates, newTemplate];
+      setSavedTemplates(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      setTemplateName('');
+      setTemplateDescription('');
+      setShowTemplateDialog(false);
+  };
+
+  // Load template
+  const loadTemplate = (template: SessionTemplate) => {
+      setActiveSoundPreset(template.soundPreset);
+      setFreq(template.freq);
+      setCutoff(template.cutoff);
+      setResonance(template.resonance);
+      setEnv(template.env);
+      setFmRatio(template.fmRatio);
+      setFmDepth(template.fmDepth);
+      setNoise(template.noise);
+      setLfoRate(template.lfoRate);
+      setLfoAmt(template.lfoAmt);
+      setDrive(template.drive);
+      setReverb(template.reverb);
+      setDelay(template.delay);
+      setBinauralOn(template.binauralOn);
+      setBeatFreq(template.beatFreq);
+
+      if (workletNodeRef.current) {
+          const node = workletNodeRef.current;
+          node.port.postMessage({ type: 'SET_FREQ', freq: template.freq });
+          node.port.postMessage({ type: 'SET_FILTER', cutoff: template.cutoff, resonance: template.resonance });
+          node.port.postMessage({ type: 'SET_FM', ratio: template.fmRatio, depth: template.fmDepth });
+          node.port.postMessage({ type: 'SET_ENVELOPE', ...template.env });
+          node.port.postMessage({ type: 'SET_NOISE', amt: template.noise });
+          node.port.postMessage({ type: 'SET_LFO', rate: template.lfoRate, amt: template.lfoAmt });
+          node.port.postMessage({ type: 'SET_DRIVE', amt: template.drive });
+          node.port.postMessage({ type: 'SET_FX', reverb: template.reverb, delay: template.delay });
+          node.port.postMessage({ type: 'SET_BINAURAL', enabled: template.binauralOn, beat: template.beatFreq });
+      }
+  };
+
+  // Delete template
+  const deleteTemplate = (id: string) => {
+      if (!confirm('Delete this template?')) return;
+      const updated = savedTemplates.filter(t => t.id !== id);
+      setSavedTemplates(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
   return (
     <Page className="bg-gradient-to-b from-slate-50 to-slate-100">
       <Navbar
@@ -310,10 +436,10 @@ export default function Home() {
       </div>
 
       {/* 3. MAIN CONTROLS (Floating Glass Dock) */}
-      <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent">
+      <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent pointer-events-none">
 
          {/* Play Button */}
-         <div className="flex justify-center -mt-8 mb-5">
+         <div className="flex justify-center -mt-8 mb-5 pointer-events-auto">
             <button
                 onClick={togglePlay}
                 className={`w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
@@ -326,7 +452,7 @@ export default function Home() {
          </div>
 
          {/* Frequency Category Tabs */}
-         <div className="flex justify-center gap-2 mb-3">
+         <div className="flex justify-center gap-2 mb-3 pointer-events-auto">
              {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
                  <button
                      key={cat}
@@ -342,7 +468,7 @@ export default function Home() {
          </div>
 
          {/* Frequency Presets (Horizontal Scroll) */}
-         <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x">
+         <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x pointer-events-auto">
              {FREQUENCY_PRESETS
                  .filter(f => f.category === frequencyCategory)
                  .map(f => (
@@ -376,6 +502,102 @@ export default function Home() {
                 onSessionEnd={handleSessionEnd}
                 className="mb-4"
             />
+
+            {/* Templates */}
+            <BlockTitle className="!text-amber-700 !font-semibold">Templates</BlockTitle>
+            <div className="glass-card rounded-2xl p-4 mb-4">
+                {/* Save Template Button */}
+                <button
+                    onClick={() => setShowTemplateDialog(!showTemplateDialog)}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all mb-3"
+                >
+                    <Save size={18} />
+                    Save Current as Template
+                </button>
+
+                {/* Save Template Dialog */}
+                {showTemplateDialog && (
+                    <div className="mb-4 p-3 bg-white rounded-xl border-2 border-amber-200 animate-in fade-in slide-in-from-top-2">
+                        <input
+                            type="text"
+                            placeholder="Template name (required)"
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            className="w-full px-3 py-2 mb-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Description (optional)"
+                            value={templateDescription}
+                            onChange={(e) => setTemplateDescription(e.target.value)}
+                            className="w-full px-3 py-2 mb-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={saveTemplate}
+                                className="flex-1 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowTemplateDialog(false);
+                                    setTemplateName('');
+                                    setTemplateDescription('');
+                                }}
+                                className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Saved Templates List */}
+                {savedTemplates.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                            <FolderOpen size={14} />
+                            <span>Saved Templates ({savedTemplates.length})</span>
+                        </div>
+                        {savedTemplates
+                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .map(template => (
+                                <div
+                                    key={template.id}
+                                    className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                                >
+                                    <button
+                                        onClick={() => loadTemplate(template)}
+                                        className="flex-1 text-left min-w-0"
+                                    >
+                                        <div className="font-semibold text-slate-700 text-sm truncate">
+                                            {template.name}
+                                        </div>
+                                        {template.description && (
+                                            <div className="text-xs text-slate-500 truncate">
+                                                {template.description}
+                                            </div>
+                                        )}
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            {template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => deleteTemplate(template.id)}
+                                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 shrink-0"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-6 text-slate-400 text-sm">
+                        No templates saved yet
+                    </div>
+                )}
+            </div>
 
             {/* Microphone Input */}
             <BlockTitle className="!text-rose-700 !font-semibold">Tuner</BlockTitle>
