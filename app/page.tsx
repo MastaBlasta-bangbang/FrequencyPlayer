@@ -803,7 +803,24 @@ export default function Home() {
                      </button>
 
                      {sequenceBuilderExpanded && (
-                        <div className="mt-2">
+                        <div className="mt-2 space-y-2">
+                           {/* Load Template */}
+                           {savedTemplates.length > 0 && (
+                              <select
+                                 onChange={(e) => {
+                                    const template = savedTemplates.find(t => t.id === e.target.value);
+                                    if (template) loadTemplate(template);
+                                 }}
+                                 className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
+                              >
+                                 <option value="">Load Template...</option>
+                                 {savedTemplates.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                 ))}
+                              </select>
+                           )}
+
+                           {/* SessionTimer */}
                            <SessionTimer
                               currentFrequency={freq}
                               frequencyPresets={FREQUENCY_PRESETS}
@@ -813,29 +830,14 @@ export default function Home() {
                               onSessionStatusChange={handleSessionStatusChange}
                               className=""
                            />
-                        </div>
-                     )}
-                  </div>
 
-                  {/* 6. TEMPLATES */}
-                  <div className="glass-card rounded-xl p-3">
-                     <button
-                        onClick={() => setTemplatesExpanded(!templatesExpanded)}
-                        className="w-full flex items-center justify-between"
-                     >
-                        <h3 className="text-sm font-semibold text-slate-700">Templates</h3>
-                        {templatesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                     </button>
-
-                     {templatesExpanded && (
-                        <div className="space-y-2 mt-2">
-                           {/* Save Template Button */}
+                           {/* Save as Template */}
                            <button
                               onClick={() => setShowTemplateDialog(!showTemplateDialog)}
                               className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all"
                            >
                               <Save size={14} />
-                              Save Current
+                              Save as Template
                            </button>
 
                            {/* Save Dialog */}
@@ -864,25 +866,6 @@ export default function Home() {
                                     </button>
                                  </div>
                               </div>
-                           )}
-
-                           {/* Templates List */}
-                           {savedTemplates.length > 0 ? (
-                              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                                 {savedTemplates.sort((a, b) => b.timestamp - a.timestamp).map(template => (
-                                    <div key={template.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100">
-                                       <button onClick={() => loadTemplate(template)} className="flex-1 text-left min-w-0">
-                                          <div className="text-xs font-semibold text-slate-700 truncate">{template.name}</div>
-                                          <div className="text-[10px] text-slate-400">{template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}</div>
-                                       </button>
-                                       <button onClick={() => deleteTemplate(template.id)} className="p-1 rounded text-slate-400 hover:text-rose-500">
-                                          <Trash2 size={12} />
-                                       </button>
-                                    </div>
-                                 ))}
-                              </div>
-                           ) : (
-                              <p className="text-center py-3 text-slate-400 text-xs">No templates saved</p>
                            )}
                         </div>
                      )}

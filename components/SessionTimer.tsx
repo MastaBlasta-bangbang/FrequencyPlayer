@@ -540,8 +540,8 @@ export default function SessionTimer({
                         <div className="text-center py-3 px-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
                             <p className="text-sm text-emerald-700 font-medium">
                                 {mode === 'sequence' && segments.length === 0
-                                    ? '⬆ Add frequencies to your sequence above'
-                                    : '⬇ Press the Play button below to start'}
+                                    ? 'Add frequencies to your sequence'
+                                    : 'Press Play to start'}
                             </p>
                         </div>
                     )}
