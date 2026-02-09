@@ -109,10 +109,12 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeSoundPreset, setActiveSoundPreset] = useState("Healing Pad");
   const [frequencyCategory, setFrequencyCategory] = useState<FrequencyCategory>('solfeggio');
-  const [frequencyAccordionOpen, setFrequencyAccordionOpen] = useState(true);
-  const [toneAccordionOpen, setToneAccordionOpen] = useState(false);
-  const [binauralAccordionOpen, setBinauralAccordionOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
   const [customFrequency, setCustomFrequency] = useState('');
+
+  // Smart Play Button - track if session is ready
+  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const sessionStartHandlerRef = useRef<(() => void) | null>(null);
 
   // CORE PARAMS - Default to 432 Hz (Verdi A)
   const [freq, setFreq] = useState(432);
@@ -187,7 +189,15 @@ export default function Home() {
       node.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: beatFreq });
   };
 
+  // Smart context-aware play handler
   const togglePlay = () => {
+      // If session is configured, start the session instead
+      if (hasActiveSession && sessionStartHandlerRef.current && !isPlaying) {
+          sessionStartHandlerRef.current();
+          return;
+      }
+
+      // Otherwise, manual play (continuous)
       if (!audioContextRef.current) { initAudio(); return; }
       if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
       const node = workletNodeRef.current;
@@ -201,6 +211,12 @@ export default function Home() {
           setIsPlaying(true);
       }
   };
+
+  // Callback from SessionTimer to notify about session status
+  const handleSessionStatusChange = useCallback((isReady: boolean, startHandler: (() => void) | null) => {
+      setHasActiveSession(isReady);
+      sessionStartHandlerRef.current = startHandler;
+  }, []);
 
   // Load sound preset - does NOT change frequency
   const loadSoundPreset = (p: typeof SOUND_PRESETS[0]) => {
@@ -396,6 +412,7 @@ export default function Home() {
             onFrequencyChange={loadFrequencyPreset}
             onSessionStart={handleSessionStart}
             onSessionEnd={handleSessionEnd}
+            onSessionStatusChange={handleSessionStatusChange}
             className="mb-4"
         />
 
@@ -499,47 +516,48 @@ export default function Home() {
       {/* 3. SETTINGS ACCORDION (Floating Glass Dock) */}
       <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent pointer-events-none">
 
-         {/* Play Button - More opaque background */}
-         <div className="flex justify-center -mt-8 mb-3 pointer-events-auto">
+         {/* Smart Play Button - Context-aware */}
+         <div className="flex flex-col items-center -mt-8 mb-3 pointer-events-auto">
             <button
                 onClick={togglePlay}
                 className={`w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
                 ${isPlaying
                     ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-cyan-400 shadow-cyan-200/50 text-white'
+                    : hasActiveSession
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 shadow-emerald-200/50 text-white hover:scale-105'
                     : 'bg-white/95 border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-500'}`}
             >
                 {isPlaying ? <Square size={22} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
             </button>
+            {/* Context indicator */}
+            {hasActiveSession && !isPlaying && (
+                <div className="mt-2 px-3 py-1 bg-emerald-500/90 backdrop-blur-sm rounded-full text-white text-xs font-medium shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                    Start Session
+                </div>
+            )}
          </div>
 
-         {/* Accordion Toggle Bars (when all closed) */}
-         {!frequencyAccordionOpen && !toneAccordionOpen && !binauralAccordionOpen && (
-            <div className="flex justify-center gap-2 mb-2 pointer-events-auto">
+         {/* Accordion Toggle Bar (when closed) */}
+         {!settingsOpen && (
+            <div className="flex justify-center mb-2 pointer-events-auto">
                <button
-                  onClick={() => setFrequencyAccordionOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all text-sm font-medium"
+                  onClick={() => setSettingsOpen(true)}
+                  className="px-6 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-2 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all text-sm font-medium"
                >
-                  Frequencies <ChevronUp size={14} />
-               </button>
-               <button
-                  onClick={() => setToneAccordionOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-cyan-600 hover:border-cyan-300 transition-all text-sm font-medium"
-               >
-                  Tone <ChevronUp size={14} />
-               </button>
-               <button
-                  onClick={() => setBinauralAccordionOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-1 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 transition-all text-sm font-medium"
-               >
-                  Binaural <ChevronUp size={14} />
+                  <span>Settings</span>
+                  <ChevronUp size={16} />
                </button>
             </div>
          )}
 
-         {/* FREQUENCIES ACCORDION */}
-         {frequencyAccordionOpen && (
-            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
-               <div className="glass-card rounded-2xl p-4 mb-2">
+         {/* ALL SETTINGS SECTIONS (when open) */}
+         {settingsOpen && (
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto space-y-3">
+
+               {/* 1. FREQUENCIES */}
+               <div className="glass-card rounded-2xl p-4">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Frequencies</h3>
+
                   {/* Frequency Category Tabs */}
                   <div className="flex justify-center gap-2 mb-3">
                      {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
@@ -609,22 +627,8 @@ export default function Home() {
                   )}
                </div>
 
-               {/* Close button */}
-               <div className="flex justify-center">
-                  <button
-                     onClick={() => setFrequencyAccordionOpen(false)}
-                     className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                     Hide ↓
-                  </button>
-               </div>
-            </div>
-         )}
-
-         {/* TONE ACCORDION (Sound Presets) */}
-         {toneAccordionOpen && (
-            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
-               <div className="glass-card rounded-2xl p-4 mb-2">
+               {/* 2. TONE (Sound Presets) */}
+               <div className="glass-card rounded-2xl p-4">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Tone</h3>
                   <div className="grid grid-cols-5 gap-2">
                      {SOUND_PRESETS.map(p => (
@@ -645,22 +649,8 @@ export default function Home() {
                   </div>
                </div>
 
-               {/* Close button */}
-               <div className="flex justify-center">
-                  <button
-                     onClick={() => setToneAccordionOpen(false)}
-                     className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                     Hide ↓
-                  </button>
-               </div>
-            </div>
-         )}
-
-         {/* BINAURAL ACCORDION */}
-         {binauralAccordionOpen && (
-            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
-               <div className="glass-card rounded-2xl p-4 mb-2">
+               {/* 3. BINAURAL */}
+               <div className="glass-card rounded-2xl p-4">
                   <div className="flex justify-between items-center mb-4">
                      <span className="text-sm font-semibold text-slate-700">Binaural Entrainment</span>
                      <Toggle
@@ -696,7 +686,7 @@ export default function Home() {
                {/* Close button */}
                <div className="flex justify-center">
                   <button
-                     onClick={() => setBinauralAccordionOpen(false)}
+                     onClick={() => setSettingsOpen(false)}
                      className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
                   >
                      Hide ↓

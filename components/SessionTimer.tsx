@@ -24,6 +24,7 @@ interface SessionTimerProps {
     onFrequencyChange: (frequency: number) => void;
     onSessionStart?: () => void;
     onSessionEnd?: () => void;
+    onSessionStatusChange?: (isReady: boolean, startHandler: (() => void) | null) => void;
     className?: string;
 }
 
@@ -49,6 +50,7 @@ export default function SessionTimer({
     onFrequencyChange,
     onSessionStart,
     onSessionEnd,
+    onSessionStatusChange,
     className = '',
 }: SessionTimerProps) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -69,6 +71,18 @@ export default function SessionTimer({
     // Calculate total sequence duration
     const sequenceDuration = segments.reduce((sum, s) => sum + s.durationSeconds, 0);
     const effectiveDuration = mode === 'single' ? totalDuration : sequenceDuration;
+
+    // Notify parent when session status changes
+    useEffect(() => {
+        if (isActive) {
+            // If timer is running, session is not "ready to start"
+            onSessionStatusChange?.(false, null);
+        } else {
+            // Session is ready if: single mode (always ready) OR sequence mode with segments
+            const isReady = mode === 'single' || (mode === 'sequence' && segments.length > 0);
+            onSessionStatusChange?.(isReady, isReady ? startTimer : null);
+        }
+    }, [mode, segments.length, isActive, startTimer, onSessionStatusChange]);
 
     // Format time as MM:SS
     const formatTime = (seconds: number): string => {
@@ -521,20 +535,15 @@ export default function SessionTimer({
                         </div>
                     )}
 
-                    {/* Start button */}
+                    {/* Instruction when ready */}
                     {!isActive && (
-                        <button
-                            onClick={startTimer}
-                            disabled={mode === 'sequence' && segments.length === 0}
-                            className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all ${
-                                mode === 'sequence' && segments.length === 0
-                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
-                            }`}
-                        >
-                            <Play size={18} fill="currentColor" />
-                            Start {mode === 'single' ? 'Timer' : 'Sequence'}
-                        </button>
+                        <div className="text-center py-3 px-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                            <p className="text-sm text-emerald-700 font-medium">
+                                {mode === 'sequence' && segments.length === 0
+                                    ? '⬆ Add frequencies to your sequence above'
+                                    : '⬇ Press the Play button below to start'}
+                            </p>
+                        </div>
                     )}
                 </div>
             )}
