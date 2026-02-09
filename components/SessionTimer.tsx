@@ -225,7 +225,7 @@ export default function SessionTimer({
                         <Timer size={20} />
                     </div>
                     <div className="text-left">
-                        <h3 className="text-sm font-semibold text-slate-700">Session Timer</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">Create a Sequence</h3>
                         <p className="text-xs text-slate-500">
                             {isActive
                                 ? `${formatTime(effectiveDuration - elapsedSeconds)} remaining`
@@ -478,14 +478,19 @@ export default function SessionTimer({
                         </div>
                     )}
 
-                    {/* Instruction when ready */}
-                    {!isActive && (
-                        <div className="text-center py-3 px-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
-                            <p className="text-sm text-emerald-700 font-medium">
-                                {mode === 'sequence' && segments.length === 0
-                                    ? 'Add frequencies to your sequence'
-                                    : 'Press Play to start'}
-                            </p>
+                    {/* Start Sequence Button */}
+                    {!isActive && segments.length > 0 && (
+                        <button
+                            onClick={startTimer}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                        >
+                            <Play size={18} fill="currentColor" />
+                            Start Sequence
+                        </button>
+                    )}
+                    {!isActive && segments.length === 0 && (
+                        <div className="text-center py-3 text-slate-400 text-sm">
+                            Add frequencies to your sequence
                         </div>
                     )}
                 </div>

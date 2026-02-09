@@ -121,7 +121,13 @@ export default function Home() {
   // Settings modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
+
+  // Session Timer state
   const [sessionTimerEnabled, setSessionTimerEnabled] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(60); // seconds
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
+  const [sessionTimerActive, setSessionTimerActive] = useState(false);
+  const sessionTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Smart Play Button - track if session is ready
   const [hasActiveSession, setHasActiveSession] = useState(false);
@@ -244,6 +250,14 @@ export default function Home() {
       if (isPlaying) {
           node.port.postMessage({ type: 'NOTE_OFF' });
           setIsPlaying(false);
+          // Stop session timer if active
+          if (sessionTimerActive) {
+              setSessionTimerActive(false);
+              if (sessionTimerIntervalRef.current) {
+                  clearInterval(sessionTimerIntervalRef.current);
+                  sessionTimerIntervalRef.current = null;
+              }
+          }
       } else {
           // CRITICAL: Resume audio context BEFORE sending NOTE_ON
           if (audioContextRef.current) {
@@ -261,8 +275,45 @@ export default function Home() {
           // Now safe to start audio
           node.port.postMessage({ type: 'NOTE_ON' });
           setIsPlaying(true);
+
+          // Start session timer if enabled
+          if (sessionTimerEnabled && sessionDuration > 0) {
+              setSessionTimeRemaining(sessionDuration);
+              setSessionTimerActive(true);
+          }
       }
   };
+
+  // Session timer countdown logic
+  useEffect(() => {
+      if (sessionTimerActive && sessionTimeRemaining > 0) {
+          sessionTimerIntervalRef.current = setInterval(() => {
+              setSessionTimeRemaining(prev => {
+                  if (prev <= 1) {
+                      // Timer reached zero - stop playback
+                      if (workletNodeRef.current && isPlaying) {
+                          workletNodeRef.current.port.postMessage({ type: 'NOTE_OFF' });
+                          setIsPlaying(false);
+                      }
+                      setSessionTimerActive(false);
+                      if (sessionTimerIntervalRef.current) {
+                          clearInterval(sessionTimerIntervalRef.current);
+                          sessionTimerIntervalRef.current = null;
+                      }
+                      return 0;
+                  }
+                  return prev - 1;
+              });
+          }, 1000);
+      }
+
+      return () => {
+          if (sessionTimerIntervalRef.current) {
+              clearInterval(sessionTimerIntervalRef.current);
+              sessionTimerIntervalRef.current = null;
+          }
+      };
+  }, [sessionTimerActive, isPlaying]);
 
   // Callback from SessionTimer to notify about session status
   const handleSessionStatusChange = useCallback((isReady: boolean, startHandler: (() => void) | null) => {
@@ -584,6 +635,12 @@ export default function Home() {
                     <Play size={28} fill="currentColor" className="ml-1" />
                 )}
             </button>
+            {/* Session Timer Countdown */}
+            {sessionTimerActive && sessionTimeRemaining > 0 && (
+                <div className="mt-2 px-4 py-1.5 bg-emerald-500/90 backdrop-blur-sm rounded-full text-white text-sm font-bold shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                    {Math.floor(sessionTimeRemaining / 60)}:{String(sessionTimeRemaining % 60).padStart(2, '0')}
+                </div>
+            )}
             {/* Context indicators */}
             {!isReady && (
                 <div className="mt-2 px-3 py-1 bg-slate-400/90 backdrop-blur-sm rounded-full text-white text-xs font-medium shadow-lg animate-pulse">
@@ -782,13 +839,39 @@ export default function Home() {
                               <Toggle checked={sessionTimerEnabled} onChange={() => setSessionTimerEnabled(!sessionTimerEnabled)} />
                            </div>
                            <div className="flex gap-1.5">
-                              {[1, 3, 5, 10].map(min => (
-                                 <button key={min} className="flex-1 py-2 bg-slate-100 hover:bg-emerald-500 hover:text-white rounded-lg text-xs font-medium transition-colors">
-                                    {min}m
-                                 </button>
-                              ))}
+                              {[1, 3, 5, 10].map(min => {
+                                 const seconds = min * 60;
+                                 const isActive = sessionDuration === seconds;
+                                 return (
+                                    <button
+                                       key={min}
+                                       onClick={() => setSessionDuration(seconds)}
+                                       className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
+                                          isActive
+                                             ? 'bg-emerald-500 text-white shadow-md'
+                                             : 'bg-slate-100 hover:bg-emerald-400 hover:text-white'
+                                       }`}
+                                    >
+                                       {min}m
+                                    </button>
+                                 );
+                              })}
                            </div>
-                           <input type="number" min="1" placeholder="Custom minutes" className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />
+                           <input
+                              type="number"
+                              min="1"
+                              placeholder="Custom minutes"
+                              onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                    const val = parseInt(e.currentTarget.value);
+                                    if (!isNaN(val) && val > 0) {
+                                       setSessionDuration(val * 60);
+                                       e.currentTarget.value = '';
+                                    }
+                                 }
+                              }}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs"
+                           />
                         </div>
                      )}
                   </div>
