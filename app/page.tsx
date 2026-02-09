@@ -756,6 +756,128 @@ export default function Home() {
                         </div>
                      )}
                   </div>
+
+                  {/* 4. SESSION TIMER - Simple timer (OFF by default) */}
+                  {sessionTimerEnabled && (
+                     <div className="glass-card rounded-xl p-3">
+                        <button
+                           onClick={() => setSessionTimerExpanded(!sessionTimerExpanded)}
+                           className="w-full flex items-center justify-between"
+                        >
+                           <h3 className="text-sm font-semibold text-slate-700">Session Timer</h3>
+                           {sessionTimerExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+
+                        {sessionTimerExpanded && (
+                           <div className="space-y-2 mt-2">
+                              <p className="text-xs text-slate-500">Quick timer - coming soon!</p>
+                              <div className="flex gap-1.5">
+                                 {[1, 3, 5, 10].map(min => (
+                                    <button key={min} className="flex-1 py-2 bg-slate-100 hover:bg-emerald-500 hover:text-white rounded-lg text-xs font-medium transition-colors">
+                                       {min}m
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                        )}
+                     </div>
+                  )}
+
+                  {/* 5. SEQUENCE BUILDER - Full SessionTimer */}
+                  <div className="glass-card rounded-xl p-3">
+                     <button
+                        onClick={() => setSequenceBuilderExpanded(!sequenceBuilderExpanded)}
+                        className="w-full flex items-center justify-between"
+                     >
+                        <h3 className="text-sm font-semibold text-slate-700">Sequence Builder</h3>
+                        {sequenceBuilderExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                     </button>
+
+                     {sequenceBuilderExpanded && (
+                        <div className="mt-2">
+                           <SessionTimer
+                              currentFrequency={freq}
+                              frequencyPresets={FREQUENCY_PRESETS}
+                              onFrequencyChange={loadFrequencyPreset}
+                              onSessionStart={handleSessionStart}
+                              onSessionEnd={handleSessionEnd}
+                              onSessionStatusChange={handleSessionStatusChange}
+                              className=""
+                           />
+                        </div>
+                     )}
+                  </div>
+
+                  {/* 6. TEMPLATES */}
+                  <div className="glass-card rounded-xl p-3">
+                     <button
+                        onClick={() => setTemplatesExpanded(!templatesExpanded)}
+                        className="w-full flex items-center justify-between"
+                     >
+                        <h3 className="text-sm font-semibold text-slate-700">Templates</h3>
+                        {templatesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                     </button>
+
+                     {templatesExpanded && (
+                        <div className="space-y-2 mt-2">
+                           {/* Save Template Button */}
+                           <button
+                              onClick={() => setShowTemplateDialog(!showTemplateDialog)}
+                              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all"
+                           >
+                              <Save size={14} />
+                              Save Current
+                           </button>
+
+                           {/* Save Dialog */}
+                           {showTemplateDialog && (
+                              <div className="p-2 bg-white rounded-lg border border-amber-200 space-y-2">
+                                 <input
+                                    type="text"
+                                    placeholder="Name (required)"
+                                    value={templateName}
+                                    onChange={(e) => setTemplateName(e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs"
+                                 />
+                                 <input
+                                    type="text"
+                                    placeholder="Description (optional)"
+                                    value={templateDescription}
+                                    onChange={(e) => setTemplateDescription(e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs"
+                                 />
+                                 <div className="flex gap-2">
+                                    <button onClick={saveTemplate} className="flex-1 py-1.5 bg-amber-500 text-white rounded text-xs font-medium">
+                                       Save
+                                    </button>
+                                    <button onClick={() => { setShowTemplateDialog(false); setTemplateName(''); setTemplateDescription(''); }} className="flex-1 py-1.5 bg-slate-200 text-slate-600 rounded text-xs font-medium">
+                                       Cancel
+                                    </button>
+                                 </div>
+                              </div>
+                           )}
+
+                           {/* Templates List */}
+                           {savedTemplates.length > 0 ? (
+                              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                                 {savedTemplates.sort((a, b) => b.timestamp - a.timestamp).map(template => (
+                                    <div key={template.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100">
+                                       <button onClick={() => loadTemplate(template)} className="flex-1 text-left min-w-0">
+                                          <div className="text-xs font-semibold text-slate-700 truncate">{template.name}</div>
+                                          <div className="text-[10px] text-slate-400">{template.freq.toFixed(1)} Hz • {template.soundPreset || 'Custom'}</div>
+                                       </button>
+                                       <button onClick={() => deleteTemplate(template.id)} className="p-1 rounded text-slate-400 hover:text-rose-500">
+                                          <Trash2 size={12} />
+                                       </button>
+                                    </div>
+                                 ))}
+                              </div>
+                           ) : (
+                              <p className="text-center py-3 text-slate-400 text-xs">No templates saved</p>
+                           )}
+                        </div>
+                     )}
+                  </div>
                </div>
 
                {/* Close button */}
