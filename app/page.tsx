@@ -214,11 +214,6 @@ export default function Home() {
           await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // Resume audio context if suspended (browser requirement)
-      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          await audioContextRef.current.resume();
-      }
-
       const node = workletNodeRef.current;
 
       // Check if system is ready
@@ -232,6 +227,20 @@ export default function Home() {
           node.port.postMessage({ type: 'NOTE_OFF' });
           setIsPlaying(false);
       } else {
+          // CRITICAL: Resume audio context BEFORE sending NOTE_ON
+          if (audioContextRef.current) {
+              if (audioContextRef.current.state === 'suspended') {
+                  await audioContextRef.current.resume();
+              }
+
+              // Double-check it's actually running
+              if (audioContextRef.current.state !== 'running') {
+                  console.log('Audio context not running, state:', audioContextRef.current.state);
+                  return;
+              }
+          }
+
+          // Now safe to start audio
           node.port.postMessage({ type: 'NOTE_ON' });
           setIsPlaying(true);
       }
@@ -273,10 +282,18 @@ export default function Home() {
   }, []);
 
   // Handle session start - start playing if not already
-  const handleSessionStart = useCallback(() => {
-      if (!isPlaying && workletNodeRef.current) {
-          workletNodeRef.current.port.postMessage({ type: 'NOTE_ON' });
-          setIsPlaying(true);
+  const handleSessionStart = useCallback(async () => {
+      if (!isPlaying && workletNodeRef.current && audioContextRef.current) {
+          // Resume audio context if needed (browser requirement)
+          if (audioContextRef.current.state === 'suspended') {
+              await audioContextRef.current.resume();
+          }
+
+          // Verify it's running before starting
+          if (audioContextRef.current.state === 'running') {
+              workletNodeRef.current.port.postMessage({ type: 'NOTE_ON' });
+              setIsPlaying(true);
+          }
       }
   }, [isPlaying]);
 
