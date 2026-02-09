@@ -15,7 +15,7 @@ import {
   SegmentedButton,
   Card
 } from 'konsta/react';
-import { Play, Square, Settings2, Waves, Dices, FlaskConical, Sparkles, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2 } from 'lucide-react';
+import { Play, Square, Settings2, Waves, Dices, FlaskConical, Sparkles, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import MicInput from '@/components/MicInput';
 import SessionTimer from '@/components/SessionTimer';
@@ -119,6 +119,7 @@ export default function Home() {
   const [labMode, setLabMode] = useState(false);
   const [activeSoundPreset, setActiveSoundPreset] = useState("Healing Pad");
   const [frequencyCategory, setFrequencyCategory] = useState<FrequencyCategory>('solfeggio');
+  const [frequencyAccordionOpen, setFrequencyAccordionOpen] = useState(true);
 
   // CORE PARAMS - Default to 432 Hz (Verdi A)
   const [freq, setFreq] = useState(432);
@@ -420,7 +421,10 @@ export default function Home() {
           {SOUND_PRESETS.map(p => (
             <button
               key={p.label}
-              onClick={() => loadSoundPreset(p)}
+              onClick={() => {
+                loadSoundPreset(p);
+                setFrequencyAccordionOpen(false);
+              }}
               className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300
                 ${activeSoundPreset === p.label
                   ? 'preset-active text-white shadow-lg scale-105'
@@ -438,60 +442,88 @@ export default function Home() {
       {/* 3. MAIN CONTROLS (Floating Glass Dock) */}
       <div className="fixed bottom-0 left-0 w-full p-4 pb-8 z-50 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent pointer-events-none">
 
-         {/* Play Button */}
-         <div className="flex justify-center -mt-8 mb-5 pointer-events-auto">
+         {/* Play Button - More opaque background */}
+         <div className="flex justify-center -mt-8 mb-3 pointer-events-auto">
             <button
                 onClick={togglePlay}
                 className={`w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
                 ${isPlaying
                     ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-cyan-400 shadow-cyan-200/50 text-white'
-                    : 'bg-white border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-500'}`}
+                    : 'bg-white/95 border-slate-200 text-slate-400 hover:border-cyan-300 hover:text-cyan-500'}`}
             >
                 {isPlaying ? <Square size={22} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
             </button>
          </div>
 
-         {/* Frequency Category Tabs */}
-         <div className="flex justify-center gap-2 mb-3 pointer-events-auto">
-             {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
-                 <button
-                     key={cat}
-                     onClick={() => setFrequencyCategory(cat)}
-                     className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300
-                     ${frequencyCategory === cat
-                         ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg'
-                         : 'glass-card text-slate-500 hover:text-violet-600'}`}
-                 >
-                     {cat}
-                 </button>
-             ))}
-         </div>
+         {/* Accordion Toggle Bar */}
+         {!frequencyAccordionOpen && (
+            <div className="flex justify-center mb-2 pointer-events-auto">
+               <button
+                  onClick={() => setFrequencyAccordionOpen(true)}
+                  className="px-6 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-2 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all"
+               >
+                  <span className="text-sm font-medium">Frequencies</span>
+                  <ChevronUp size={16} />
+               </button>
+            </div>
+         )}
 
-         {/* Frequency Presets (Horizontal Scroll) */}
-         <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x pointer-events-auto">
-             {FREQUENCY_PRESETS
-                 .filter(f => f.category === frequencyCategory)
-                 .map(f => (
-                 <button
-                    key={f.label}
-                    onClick={() => loadFrequencyPreset(f.frequency)}
-                    className={`snap-center shrink-0 w-16 h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-300
-                    ${freq === f.frequency
-                        ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-lg shadow-violet-200/50'
-                        : 'glass-card border-white/50 text-slate-500 hover:border-violet-200'}`}
-                 >
-                     <span className="text-lg font-bold">{f.label}</span>
-                     <span className="text-[9px] uppercase tracking-widest opacity-70">
-                         {f.description || 'Hz'}
-                     </span>
-                 </button>
-             ))}
-         </div>
+         {/* Frequency Accordion Content */}
+         {frequencyAccordionOpen && (
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300">
+               {/* Frequency Category Tabs */}
+               <div className="flex justify-center gap-2 mb-3 pointer-events-auto">
+                  {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
+                     <button
+                        key={cat}
+                        onClick={() => setFrequencyCategory(cat)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300
+                        ${frequencyCategory === cat
+                           ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg'
+                           : 'glass-card text-slate-500 hover:text-violet-600'}`}
+                     >
+                        {cat}
+                     </button>
+                  ))}
+               </div>
+
+               {/* Frequency Presets (Horizontal Scroll) */}
+               <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x pointer-events-auto">
+                  {FREQUENCY_PRESETS
+                     .filter(f => f.category === frequencyCategory)
+                     .map(f => (
+                     <button
+                        key={f.label}
+                        onClick={() => loadFrequencyPreset(f.frequency)}
+                        className={`snap-center shrink-0 w-16 h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-300
+                        ${freq === f.frequency
+                           ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-lg shadow-violet-200/50'
+                           : 'glass-card border-white/50 text-slate-500 hover:border-violet-200'}`}
+                     >
+                        <span className="text-lg font-bold">{f.label}</span>
+                        <span className="text-[9px] uppercase tracking-widest opacity-70">
+                           {f.description || 'Hz'}
+                        </span>
+                     </button>
+                  ))}
+               </div>
+
+               {/* Close accordion bar */}
+               <div className="flex justify-center pointer-events-auto">
+                  <button
+                     onClick={() => setFrequencyAccordionOpen(false)}
+                     className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                     Hide ↓
+                  </button>
+               </div>
+            </div>
+         )}
       </div>
 
       {/* 4. LAB MODE (Hidden by default) */}
       {labMode && (
-        <div className="px-4 animate-in fade-in slide-in-from-bottom-10 duration-500">
+        <div className="px-4 animate-in fade-in slide-in-from-bottom-10 duration-500" onClick={() => setFrequencyAccordionOpen(false)}>
             {/* Session Timer */}
             <BlockTitle className="!text-emerald-700 !font-semibold">Session</BlockTitle>
             <SessionTimer

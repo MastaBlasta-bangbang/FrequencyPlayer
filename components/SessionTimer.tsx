@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Play, Pause, Square, Plus, X, ChevronDown, ChevronUp, ListMusic, Clock } from 'lucide-react';
+import { Toggle } from 'konsta/react';
 
 interface FrequencyPreset {
     label: string;
@@ -35,6 +36,13 @@ const DURATION_PRESETS = [
     { label: '10m', seconds: 600 },
 ];
 
+const SEGMENT_DURATION_PRESETS = [
+    { label: '1m', seconds: 60 },
+    { label: '2m', seconds: 120 },
+    { label: '3m', seconds: 180 },
+    { label: '5m', seconds: 300 },
+];
+
 export default function SessionTimer({
     currentFrequency,
     frequencyPresets,
@@ -47,6 +55,8 @@ export default function SessionTimer({
     const [mode, setMode] = useState<SessionMode>('single');
     const [totalDuration, setTotalDuration] = useState(180); // 3 minutes default
     const [segments, setSegments] = useState<Segment[]>([]);
+    const [autoDistribute, setAutoDistribute] = useState(false);
+    const [targetSequenceDuration, setTargetSequenceDuration] = useState(600); // 10 minutes default
 
     // Timer state
     const [isActive, setIsActive] = useState(false);
@@ -164,6 +174,13 @@ export default function SessionTimer({
         setSegments(prev => prev.map(s =>
             s.id === id ? { ...s, durationSeconds: Math.max(10, seconds) } : s
         ));
+    };
+
+    // Auto-distribute duration across all segments
+    const distributeTimeEvenly = () => {
+        if (segments.length === 0) return;
+        const durationPerSegment = Math.floor(targetSequenceDuration / segments.length);
+        setSegments(prev => prev.map(s => ({ ...s, durationSeconds: durationPerSegment })));
     };
 
     // Calculate progress percentage
@@ -343,37 +360,104 @@ export default function SessionTimer({
                                         ))}
                                     </div>
 
+                                    {/* Auto-distribute controls */}
+                                    <div className="mb-3 p-3 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-violet-700">Auto-distribute time</span>
+                                            <Toggle
+                                                checked={autoDistribute}
+                                                onChange={() => setAutoDistribute(!autoDistribute)}
+                                            />
+                                        </div>
+                                        {autoDistribute && (
+                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="120"
+                                                        value={Math.floor(targetSequenceDuration / 60)}
+                                                        onChange={(e) => setTargetSequenceDuration(parseInt(e.target.value || '10') * 60)}
+                                                        className="w-16 bg-white border border-violet-300 rounded-lg px-2 py-1 text-sm text-center"
+                                                    />
+                                                    <span className="text-xs text-violet-600">minutes total</span>
+                                                </div>
+                                                <button
+                                                    onClick={distributeTimeEvenly}
+                                                    className="w-full py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs font-medium transition-colors"
+                                                >
+                                                    Distribute {Math.floor(targetSequenceDuration / segments.length)} sec per frequency
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Segment list */}
-                                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {segments.map((seg, i) => (
                                             <div
                                                 key={seg.id}
-                                                className="flex items-center gap-2 bg-slate-50 rounded-xl p-2"
+                                                className="bg-slate-50 rounded-xl p-3 space-y-2"
                                             >
-                                                <div
-                                                    className="w-3 h-3 rounded-full shrink-0"
-                                                    style={{ backgroundColor: `hsl(${(i * 60) % 360}, 70%, 50%)` }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-medium text-slate-700 truncate">
-                                                        {seg.frequencyLabel} Hz
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className="w-3 h-3 rounded-full shrink-0"
+                                                        style={{ backgroundColor: `hsl(${(i * 60) % 360}, 70%, 50%)` }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-medium text-slate-700 truncate">
+                                                            {seg.frequencyLabel} Hz
+                                                        </div>
                                                     </div>
+                                                    <button
+                                                        onClick={() => removeFromSequence(seg.id)}
+                                                        className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
                                                 </div>
-                                                <input
-                                                    type="number"
-                                                    min="10"
-                                                    max="600"
-                                                    value={seg.durationSeconds}
-                                                    onChange={(e) => updateSegmentDuration(seg.id, parseInt(e.target.value || '60'))}
-                                                    className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-center"
-                                                />
-                                                <span className="text-xs text-slate-400">sec</span>
-                                                <button
-                                                    onClick={() => removeFromSequence(seg.id)}
-                                                    className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50"
-                                                >
-                                                    <X size={14} />
-                                                </button>
+
+                                                {/* Duration preset buttons */}
+                                                <div className="flex gap-1">
+                                                    {SEGMENT_DURATION_PRESETS.map(preset => (
+                                                        <button
+                                                            key={preset.label}
+                                                            onClick={() => updateSegmentDuration(seg.id, preset.seconds)}
+                                                            className={`flex-1 py-1 rounded text-xs font-medium transition-all ${
+                                                                seg.durationSeconds === preset.seconds
+                                                                    ? 'bg-violet-500 text-white shadow'
+                                                                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                                            }`}
+                                                        >
+                                                            {preset.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Manual input */}
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={seg.durationSeconds}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '') return; // Allow empty for typing
+                                                            const num = parseInt(val);
+                                                            if (!isNaN(num)) {
+                                                                updateSegmentDuration(seg.id, num);
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === '') {
+                                                                updateSegmentDuration(seg.id, 60); // Default to 60 if empty
+                                                            }
+                                                        }}
+                                                        className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-center"
+                                                        placeholder="seconds"
+                                                    />
+                                                    <span className="text-xs text-slate-400">sec</span>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
