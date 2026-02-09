@@ -7,7 +7,7 @@ import {
   BlockTitle,
   Toggle
 } from 'konsta/react';
-import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp } from 'lucide-react';
+import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import SessionTimer from '@/components/SessionTimer';
 
@@ -111,6 +111,11 @@ export default function Home() {
   const [frequencyCategory, setFrequencyCategory] = useState<FrequencyCategory>('solfeggio');
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [customFrequency, setCustomFrequency] = useState('');
+
+  // Collapsible sub-sections (Phase 2)
+  const [frequenciesExpanded, setFrequenciesExpanded] = useState(true);
+  const [toneExpanded, setToneExpanded] = useState(false);
+  const [binauralExpanded, setBinauralExpanded] = useState(false);
 
   // Smart Play Button - track if session is ready
   const [hasActiveSession, setHasActiveSession] = useState(false);
@@ -520,7 +525,7 @@ export default function Home() {
          <div className="flex flex-col items-center -mt-8 mb-3 pointer-events-auto">
             <button
                 onClick={togglePlay}
-                className={`w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
+                className={`play-button-landscape w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-md border-2 transition-all duration-500 shadow-xl
                 ${isPlaying
                     ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 border-cyan-400 shadow-cyan-200/50 text-white'
                     : hasActiveSession
@@ -550,136 +555,170 @@ export default function Home() {
             </div>
          )}
 
-         {/* ALL SETTINGS SECTIONS (when open) */}
+         {/* ALL SETTINGS SECTIONS (when open) - COMPACT + SCROLLABLE + COLLAPSIBLE */}
          {settingsOpen && (
-            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto space-y-3">
+            <div className="animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto">
+               {/* Scrollable container with max-height */}
+               <div className="max-h-[60vh] overflow-y-auto space-y-2 mb-2 settings-scroll">
 
-               {/* 1. FREQUENCIES */}
-               <div className="glass-card rounded-2xl p-4">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Frequencies</h3>
+                  {/* 1. FREQUENCIES - Always expanded */}
+                  <div className="glass-card rounded-xl p-3">
+                     <button
+                        onClick={() => setFrequenciesExpanded(!frequenciesExpanded)}
+                        className="w-full flex items-center justify-between mb-2"
+                     >
+                        <h3 className="text-sm font-semibold text-slate-700">Frequencies</h3>
+                        {frequenciesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                     </button>
 
-                  {/* Frequency Category Tabs */}
-                  <div className="flex justify-center gap-2 mb-3">
-                     {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
-                        <button
-                           key={cat}
-                           onClick={() => setFrequencyCategory(cat)}
-                           className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-300
-                           ${frequencyCategory === cat
-                              ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg'
-                              : 'bg-slate-100 text-slate-500 hover:text-violet-600'}`}
-                        >
-                           {cat}
-                        </button>
-                     ))}
-                  </div>
+                     {frequenciesExpanded && (
+                        <div className="space-y-2">
+                           {/* Frequency Category Tabs - Compact */}
+                           <div className="flex justify-center gap-1.5">
+                              {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
+                                 <button
+                                    key={cat}
+                                    onClick={() => setFrequencyCategory(cat)}
+                                    className={`px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-all duration-300
+                                    ${frequencyCategory === cat
+                                       ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md'
+                                       : 'bg-slate-100 text-slate-500 hover:text-violet-600'}`}
+                                 >
+                                    {cat}
+                                 </button>
+                              ))}
+                           </div>
 
-                  {/* Frequency Presets (Horizontal Scroll) */}
-                  <div className="flex gap-3 overflow-x-auto pb-3 px-2 no-scrollbar snap-x">
-                     {FREQUENCY_PRESETS
-                        .filter(f => f.category === frequencyCategory)
-                        .map(f => (
-                        <button
-                           key={f.label}
-                           onClick={() => loadFrequencyPreset(f.frequency)}
-                           className={`snap-center shrink-0 w-16 h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all duration-300
-                           ${freq === f.frequency
-                              ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-lg shadow-violet-200/50'
-                              : 'bg-white border-slate-200 text-slate-500 hover:border-violet-200'}`}
-                        >
-                           <span className="text-lg font-bold">{f.label}</span>
-                           <span className="text-[9px] uppercase tracking-widest opacity-70">
-                              {f.description || 'Hz'}
-                           </span>
-                        </button>
-                     ))}
-                  </div>
+                           {/* Frequency Presets - Smaller */}
+                           <div className="flex gap-2 overflow-x-auto pb-2 px-1 no-scrollbar snap-x">
+                              {FREQUENCY_PRESETS
+                                 .filter(f => f.category === frequencyCategory)
+                                 .map(f => (
+                                 <button
+                                    key={f.label}
+                                    onClick={() => loadFrequencyPreset(f.frequency)}
+                                    className={`snap-center shrink-0 w-14 h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all duration-300
+                                    ${freq === f.frequency
+                                       ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-400 text-white shadow-md'
+                                       : 'bg-white border-slate-200 text-slate-500 hover:border-violet-200'}`}
+                                 >
+                                    <span className="text-base font-bold">{f.label}</span>
+                                    <span className="text-[8px] uppercase tracking-widest opacity-70">
+                                       {f.description || 'Hz'}
+                                    </span>
+                                 </button>
+                              ))}
+                           </div>
 
-                  {/* Custom Frequency Input (Special tab only) */}
-                  {frequencyCategory === 'special' && (
-                     <div className="mt-3 pt-3 border-t border-slate-200">
-                        <label className="text-xs text-slate-500 mb-2 block">Custom Frequency</label>
-                        <div className="flex gap-2">
-                           <input
-                              type="number"
-                              min="20"
-                              max="2000"
-                              step="0.1"
-                              value={customFrequency}
-                              onChange={(e) => setCustomFrequency(e.target.value)}
-                              placeholder="Enter Hz..."
-                              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                           />
-                           <button
-                              onClick={() => {
-                                 const val = parseFloat(customFrequency);
-                                 if (!isNaN(val) && val >= 20 && val <= 2000) {
-                                    loadFrequencyPreset(val);
-                                    setCustomFrequency('');
-                                 }
-                              }}
-                              className="px-4 py-2 bg-violet-500 text-white rounded-lg font-medium hover:bg-violet-600"
-                           >
-                              Set
-                           </button>
+                           {/* Custom Frequency Input - Compact */}
+                           {frequencyCategory === 'special' && (
+                              <div className="pt-2 border-t border-slate-200">
+                                 <label className="text-[10px] text-slate-500 mb-1 block">Custom Hz</label>
+                                 <div className="flex gap-1.5">
+                                    <input
+                                       type="number"
+                                       min="20"
+                                       max="2000"
+                                       step="0.1"
+                                       value={customFrequency}
+                                       onChange={(e) => setCustomFrequency(e.target.value)}
+                                       placeholder="Enter Hz..."
+                                       className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    />
+                                    <button
+                                       onClick={() => {
+                                          const val = parseFloat(customFrequency);
+                                          if (!isNaN(val) && val >= 20 && val <= 2000) {
+                                             loadFrequencyPreset(val);
+                                             setCustomFrequency('');
+                                          }
+                                       }}
+                                       className="px-3 py-1.5 bg-violet-500 text-white rounded-lg text-xs font-medium hover:bg-violet-600"
+                                    >
+                                       Set
+                                    </button>
+                                 </div>
+                              </div>
+                           )}
                         </div>
-                     </div>
-                  )}
-               </div>
-
-               {/* 2. TONE (Sound Presets) */}
-               <div className="glass-card rounded-2xl p-4">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Tone</h3>
-                  <div className="grid grid-cols-5 gap-2">
-                     {SOUND_PRESETS.map(p => (
-                        <button
-                           key={p.label}
-                           onClick={() => loadSoundPreset(p)}
-                           className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300
-                           ${activeSoundPreset === p.label
-                              ? 'preset-active text-white shadow-lg scale-105'
-                              : 'bg-white text-slate-600 hover:scale-102 border border-slate-200'}`}
-                        >
-                           <span className="mb-1.5">
-                              {PRESET_ICONS[p.icon]}
-                           </span>
-                           <span className="text-[10px] font-medium leading-tight text-center">{p.label}</span>
-                        </button>
-                     ))}
+                     )}
                   </div>
-               </div>
 
-               {/* 3. BINAURAL */}
-               <div className="glass-card rounded-2xl p-4">
-                  <div className="flex justify-between items-center mb-4">
-                     <span className="text-sm font-semibold text-slate-700">Binaural Entrainment</span>
-                     <Toggle
-                        checked={binauralOn}
-                        onChange={() => {
-                           const next = !binauralOn;
-                           setBinauralOn(next);
-                           if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
-                        }}
-                     />
+                  {/* 2. TONE - Collapsible */}
+                  <div className="glass-card rounded-xl p-3">
+                     <button
+                        onClick={() => setToneExpanded(!toneExpanded)}
+                        className="w-full flex items-center justify-between"
+                     >
+                        <h3 className="text-sm font-semibold text-slate-700">Tone</h3>
+                        {toneExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                     </button>
+
+                     {toneExpanded && (
+                        <div className="grid grid-cols-5 gap-1.5 mt-2">
+                           {SOUND_PRESETS.map(p => (
+                              <button
+                                 key={p.label}
+                                 onClick={() => loadSoundPreset(p)}
+                                 className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-300
+                                 ${activeSoundPreset === p.label
+                                    ? 'preset-active text-white shadow-md scale-105'
+                                    : 'bg-white text-slate-600 hover:scale-102 border border-slate-200'}`}
+                              >
+                                 <span className="mb-1">
+                                    {PRESET_ICONS[p.icon]}
+                                 </span>
+                                 <span className="text-[9px] font-medium leading-tight text-center">{p.label}</span>
+                              </button>
+                           ))}
+                        </div>
+                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                     {BRAINWAVES.map(w => (
-                        <button
-                           key={w.label}
-                           onClick={() => {
-                              setBeatFreq(w.freq);
-                              if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
-                           }}
-                           className={`p-3 rounded-xl border-2 text-left transition-all duration-300
-                           ${beatFreq === w.freq
-                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-lg'
-                              : 'bg-white border-slate-200 text-slate-600'}`}
-                        >
-                           <div className="text-xs font-bold uppercase tracking-wider">{w.label}</div>
-                           <div className="text-lg font-light">{w.freq} Hz</div>
-                           <div className="text-[10px] opacity-70">{w.desc}</div>
-                        </button>
-                     ))}
+
+                  {/* 3. BINAURAL - Collapsible */}
+                  <div className="glass-card rounded-xl p-3">
+                     <button
+                        onClick={() => setBinauralExpanded(!binauralExpanded)}
+                        className="w-full flex items-center justify-between"
+                     >
+                        <h3 className="text-sm font-semibold text-slate-700">Binaural</h3>
+                        {binauralExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                     </button>
+
+                     {binauralExpanded && (
+                        <div className="space-y-2 mt-2">
+                           <div className="flex justify-between items-center">
+                              <span className="text-xs text-slate-600">Enable</span>
+                              <Toggle
+                                 checked={binauralOn}
+                                 onChange={() => {
+                                    const next = !binauralOn;
+                                    setBinauralOn(next);
+                                    if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: next, beat: beatFreq });
+                                 }}
+                              />
+                           </div>
+                           <div className="grid grid-cols-2 gap-1.5">
+                              {BRAINWAVES.map(w => (
+                                 <button
+                                    key={w.label}
+                                    onClick={() => {
+                                       setBeatFreq(w.freq);
+                                       if (workletNodeRef.current) workletNodeRef.current.port.postMessage({ type: 'SET_BINAURAL', enabled: binauralOn, beat: w.freq });
+                                    }}
+                                    className={`p-2 rounded-lg border-2 text-left transition-all duration-300
+                                    ${beatFreq === w.freq
+                                       ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-md'
+                                       : 'bg-white border-slate-200 text-slate-600'}`}
+                                 >
+                                    <div className="text-[10px] font-bold uppercase tracking-wider">{w.label}</div>
+                                    <div className="text-base font-light">{w.freq} Hz</div>
+                                    <div className="text-[9px] opacity-70">{w.desc}</div>
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
+                     )}
                   </div>
                </div>
 
