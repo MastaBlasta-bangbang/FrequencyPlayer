@@ -43,10 +43,11 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         maxAmplitude = Math.max(maxAmplitude, amplitude);
       }
 
-      // Dynamic scaling: larger base size, only scale down when truly necessary
-      // Start big, only reduce for extremely powerful tones
+      // Dynamic scaling: larger base size with more aggressive scaling for powerful tones
+      // Keep the size big but prevent border clipping
       const baseScale = Math.min(canvas.width, canvas.height) * 0.38;
-      const amplitudeScale = maxAmplitude > 0.85 ? 0.85 / maxAmplitude : 1.0; // Only clamp at high volumes
+      // More aggressive threshold (0.7 instead of 0.85) to catch Temple Drone & Warm String
+      const amplitudeScale = maxAmplitude > 0.7 ? 0.7 / maxAmplitude : 1.0;
       const adaptiveScale = baseScale * amplitudeScale;
 
       ctx.beginPath();
