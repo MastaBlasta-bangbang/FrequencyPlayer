@@ -35,7 +35,19 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
 
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const scale = Math.min(canvas.width, canvas.height) * 0.25; // Conservative scale to prevent clipping
+
+      // Calculate peak amplitude to dynamically scale the visualization
+      let maxAmplitude = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const amplitude = Math.abs((dataArray[i] / 128.0) - 1.0);
+        maxAmplitude = Math.max(maxAmplitude, amplitude);
+      }
+
+      // Dynamic scaling: reduce scale when amplitude is high (like Warm String, Temple Drone)
+      // Base scale is conservative, and we scale down further based on peak amplitude
+      const baseScale = Math.min(canvas.width, canvas.height) * 0.25;
+      const amplitudeScale = maxAmplitude > 0.5 ? 0.5 / maxAmplitude : 1.0; // Clamp when too loud
+      const adaptiveScale = baseScale * amplitudeScale * 0.7;
 
       ctx.beginPath();
 
@@ -48,9 +60,9 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         const xSample = dataArray[i];
         const ySample = dataArray[i + halfBuffer];
 
-        // Normalize to -1..1 with strong attenuation to keep well within bounds
-        const x = ((xSample / 128.0) - 1.0) * scale * 0.7;
-        const y = ((ySample / 128.0) - 1.0) * scale * 0.7;
+        // Normalize to -1..1 with adaptive scaling
+        const x = ((xSample / 128.0) - 1.0) * adaptiveScale;
+        const y = ((ySample / 128.0) - 1.0) * adaptiveScale;
 
         const plotX = centerX + x;
         const plotY = centerY + y;
@@ -68,10 +80,10 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
       ctx.globalAlpha = 0.2;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(centerX - scale, centerY);
-      ctx.lineTo(centerX + scale, centerY);
-      ctx.moveTo(centerX, centerY - scale);
-      ctx.lineTo(centerX, centerY + scale);
+      ctx.moveTo(centerX - adaptiveScale, centerY);
+      ctx.lineTo(centerX + adaptiveScale, centerY);
+      ctx.moveTo(centerX, centerY - adaptiveScale);
+      ctx.lineTo(centerX, centerY + adaptiveScale);
       ctx.stroke();
       ctx.globalAlpha = 1.0;
     };
