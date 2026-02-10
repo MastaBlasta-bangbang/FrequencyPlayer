@@ -10,7 +10,6 @@ import {
 import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import WaveformVisualizer from '@/components/WaveformVisualizer';
-import MandalaVisualizer from '@/components/MandalaVisualizer';
 import LissajousVisualizer from '@/components/LissajousVisualizer';
 import SessionTimer from '@/components/SessionTimer';
 
@@ -171,7 +170,7 @@ export default function Home() {
   // App settings (for modal)
   const [defaultFrequencyInput, setDefaultFrequencyInput] = useState('432');
   const [defaultTone, setDefaultTone] = useState('Healing Pad');
-  const [visualizerType, setVisualizerType] = useState<'cymatic' | 'waveform' | 'mandala' | 'lissajous'>('cymatic');
+  const [visualizerType, setVisualizerType] = useState<'cymatic' | 'waveform' | 'lissajous'>('cymatic');
   const [visualizerColor, setVisualizerColor] = useState('#0891b2'); // Default cyan
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -472,8 +471,8 @@ export default function Home() {
                   }
               }
 
-              // Apply visualizer preference
-              if (settings.visualizer) {
+              // Apply visualizer preference (default to cymatic if mandala was selected)
+              if (settings.visualizer && settings.visualizer !== 'mandala') {
                   setVisualizerType(settings.visualizer);
               }
 
@@ -731,7 +730,6 @@ export default function Home() {
                 >
                   <option value="cymatic">Cymatic Ring</option>
                   <option value="waveform">Classic Waveform</option>
-                  <option value="mandala">Mandala</option>
                   <option value="lissajous">Lissajous Curve</option>
                 </select>
               </div>
@@ -782,9 +780,6 @@ export default function Home() {
          )}
          {visualizerType === 'waveform' && (
             <WaveformVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
-         )}
-         {visualizerType === 'mandala' && (
-            <MandalaVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
          )}
          {visualizerType === 'lissajous' && (
             <LissajousVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />

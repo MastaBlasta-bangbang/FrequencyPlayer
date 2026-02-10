@@ -35,7 +35,7 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
 
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const scale = Math.min(canvas.width, canvas.height) * 0.28; // Reduced from 0.35 to prevent clipping
+      const scale = Math.min(canvas.width, canvas.height) * 0.25; // Conservative scale to prevent clipping
 
       ctx.beginPath();
 
@@ -48,9 +48,9 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         const xSample = dataArray[i];
         const ySample = dataArray[i + halfBuffer];
 
-        // Normalize to -1..1 with slight attenuation to prevent edge clipping
-        const x = ((xSample / 128.0) - 1.0) * scale * 0.85;
-        const y = ((ySample / 128.0) - 1.0) * scale * 0.85;
+        // Normalize to -1..1 with strong attenuation to keep well within bounds
+        const x = ((xSample / 128.0) - 1.0) * scale * 0.7;
+        const y = ((ySample / 128.0) - 1.0) * scale * 0.7;
 
         const plotX = centerX + x;
         const plotY = centerY + y;
