@@ -46,30 +46,36 @@ export default function CymaticRing({ analyser, width = 300, height = 300, color
       // We wrap the entire buffer (or a subset) around the circle.
       // To make it look "cymatic" (symmetrical), we can mirror the data
       // or just wrap it smoothly.
-      
+
       // Let's use a subset to avoid too much jitter
-      const step = 2; 
+      const step = 2;
+      const points: { x: number; y: number }[] = [];
 
       for (let i = 0; i < bufferLength; i += step) {
         const v = (dataArray[i] / 128.0) - 1.0; // -1 to 1
-        
+
         // Map index to angle 0..2PI
         const angle = (i / bufferLength) * Math.PI * 2;
-        
+
         // Deformation
         const r = radius + (v * 40); // 40px vibration
 
         const x = centerX + Math.cos(angle) * r;
         const y = centerY + Math.sin(angle) * r;
 
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
+        points.push({ x, y });
       }
-      
-      ctx.closePath();
+
+      // Draw the path with smooth closure
+      if (points.length > 0) {
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        // Explicitly close back to first point for seamless loop
+        ctx.lineTo(points[0].x, points[0].y);
+      }
+
       ctx.stroke();
       
       // Inner decorative ring (static or slowly breathing)
