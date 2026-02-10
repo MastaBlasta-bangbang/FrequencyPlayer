@@ -9,6 +9,9 @@ import {
 } from 'konsta/react';
 import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
+import WaveformVisualizer from '@/components/WaveformVisualizer';
+import MandalaVisualizer from '@/components/MandalaVisualizer';
+import LissajousVisualizer from '@/components/LissajousVisualizer';
 import SessionTimer from '@/components/SessionTimer';
 
 // ==========================================
@@ -168,6 +171,7 @@ export default function Home() {
   // App settings (for modal)
   const [defaultFrequencyInput, setDefaultFrequencyInput] = useState('432');
   const [defaultTone, setDefaultTone] = useState('Healing Pad');
+  const [visualizerType, setVisualizerType] = useState<'cymatic' | 'waveform' | 'mandala' | 'lissajous'>('cymatic');
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -336,14 +340,14 @@ export default function Home() {
       setDefaultTone(activeSoundPreset);
   }, [activeSoundPreset]);
 
-  // Auto-save settings when freq or preset changes (debounced via timeout)
+  // Auto-save settings when freq, preset, or visualizer changes (debounced via timeout)
   useEffect(() => {
       const timeoutId = setTimeout(() => {
           saveAppSettings();
       }, 500); // Debounce 500ms to avoid too many writes
 
       return () => clearTimeout(timeoutId);
-  }, [freq, activeSoundPreset]);
+  }, [freq, activeSoundPreset, visualizerType]);
 
   // Callback from SessionTimer to notify about session status
   const handleSessionStatusChange = useCallback((isReady: boolean, startHandler: (() => void) | null) => {
@@ -441,22 +445,31 @@ export default function Home() {
           if (settingsStored) {
               const settings = JSON.parse(settingsStored);
 
-              // Apply default frequency
+              // Apply default frequency (updates both display and audio engine)
               if (settings.defaultFrequency) {
-                  setFreq(settings.defaultFrequency);
+                  loadFrequencyPreset(settings.defaultFrequency);
                   setDefaultFrequencyInput(String(settings.defaultFrequency));
               }
 
-              // Apply default tone preset name
+              // Apply default tone preset
               if (settings.defaultTone) {
                   setDefaultTone(settings.defaultTone);
                   setActiveSoundPreset(settings.defaultTone);
+                  const preset = SOUND_PRESETS.find(p => p.label === settings.defaultTone);
+                  if (preset) {
+                      loadSoundPreset(preset);
+                  }
+              }
+
+              // Apply visualizer preference
+              if (settings.visualizer) {
+                  setVisualizerType(settings.visualizer);
               }
           }
       } catch (err) {
           console.error('Failed to load settings:', err);
       }
-  }, []);
+  }, [loadFrequencyPreset]);
 
   // Save current state as template
   const saveTemplate = () => {
@@ -542,6 +555,7 @@ export default function Home() {
           const settings = {
               defaultFrequency: freq,
               defaultTone: activeSoundPreset,
+              visualizer: visualizerType,
           };
           localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
       } catch (err) {
@@ -690,6 +704,21 @@ export default function Home() {
                 <Toggle checked={binauralOn} onChange={() => setBinauralOn(!binauralOn)} />
               </div>
 
+              {/* Visualizer Type */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Visualizer Style</label>
+                <select
+                  value={visualizerType}
+                  onChange={(e) => setVisualizerType(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="cymatic">Cymatic Ring</option>
+                  <option value="waveform">Classic Waveform</option>
+                  <option value="mandala">Mandala</option>
+                  <option value="lissajous">Lissajous Curve</option>
+                </select>
+              </div>
+
             </div>
 
             <button onClick={() => setShowSettingsModal(false)} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900">
@@ -702,7 +731,18 @@ export default function Home() {
       {/* 1. HERO VISUALIZER */}
       <div className="relative w-full h-[35vh] flex flex-col items-center justify-center">
          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 to-transparent rounded-b-[60px]" />
-         <CymaticRing analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+         {visualizerType === 'cymatic' && (
+            <CymaticRing analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+         )}
+         {visualizerType === 'waveform' && (
+            <WaveformVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+         )}
+         {visualizerType === 'mandala' && (
+            <MandalaVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+         )}
+         {visualizerType === 'lissajous' && (
+            <LissajousVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+         )}
 
          {/* Frequency Readout Overlay */}
          <div className="absolute flex flex-col items-center pointer-events-none">
