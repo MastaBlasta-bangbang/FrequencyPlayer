@@ -172,6 +172,7 @@ export default function Home() {
   const [defaultFrequencyInput, setDefaultFrequencyInput] = useState('432');
   const [defaultTone, setDefaultTone] = useState('Healing Pad');
   const [visualizerType, setVisualizerType] = useState<'cymatic' | 'waveform' | 'mandala' | 'lissajous'>('cymatic');
+  const [visualizerColor, setVisualizerColor] = useState('#0891b2'); // Default cyan
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -344,10 +345,20 @@ export default function Home() {
   useEffect(() => {
       const timeoutId = setTimeout(() => {
           saveAppSettings();
-      }, 500); // Debounce 500ms to avoid too many writes
+      }, 100); // Reduced debounce to 100ms for faster saves
 
       return () => clearTimeout(timeoutId);
-  }, [freq, activeSoundPreset, visualizerType]);
+  }, [freq, activeSoundPreset, visualizerType, visualizerColor]);
+
+  // Save settings immediately before page unload
+  useEffect(() => {
+      const handleBeforeUnload = () => {
+          saveAppSettings();
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [freq, activeSoundPreset, visualizerType, visualizerColor]);
 
   // Callback from SessionTimer to notify about session status
   const handleSessionStatusChange = useCallback((isReady: boolean, startHandler: (() => void) | null) => {
@@ -465,6 +476,11 @@ export default function Home() {
               if (settings.visualizer) {
                   setVisualizerType(settings.visualizer);
               }
+
+              // Apply visualizer color
+              if (settings.visualizerColor) {
+                  setVisualizerColor(settings.visualizerColor);
+              }
           }
       } catch (err) {
           console.error('Failed to load settings:', err);
@@ -556,6 +572,7 @@ export default function Home() {
               defaultFrequency: freq,
               defaultTone: activeSoundPreset,
               visualizer: visualizerType,
+              visualizerColor: visualizerColor,
           };
           localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
       } catch (err) {
@@ -719,6 +736,35 @@ export default function Home() {
                 </select>
               </div>
 
+              {/* Visualizer Color */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">Visualizer Color</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { name: 'Cyan', color: '#0891b2' },
+                    { name: 'Purple', color: '#a855f7' },
+                    { name: 'Emerald', color: '#10b981' },
+                    { name: 'Rose', color: '#f43f5e' },
+                    { name: 'Amber', color: '#f59e0b' },
+                    { name: 'Blue', color: '#3b82f6' },
+                    { name: 'Violet', color: '#8b5cf6' },
+                    { name: 'Pink', color: '#ec4899' },
+                  ].map((c) => (
+                    <button
+                      key={c.color}
+                      onClick={() => setVisualizerColor(c.color)}
+                      className={`h-10 rounded-lg border-2 transition-all ${
+                        visualizerColor === c.color
+                          ? 'border-slate-800 scale-110'
+                          : 'border-slate-200 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: c.color }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             <button onClick={() => setShowSettingsModal(false)} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900">
@@ -732,16 +778,16 @@ export default function Home() {
       <div className="relative w-full h-[35vh] flex flex-col items-center justify-center">
          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 to-transparent rounded-b-[60px]" />
          {visualizerType === 'cymatic' && (
-            <CymaticRing analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+            <CymaticRing analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
          )}
          {visualizerType === 'waveform' && (
-            <WaveformVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+            <WaveformVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
          )}
          {visualizerType === 'mandala' && (
-            <MandalaVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+            <MandalaVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
          )}
          {visualizerType === 'lissajous' && (
-            <LissajousVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? "#0891b2" : "#cbd5e1"} />
+            <LissajousVisualizer analyser={analyserRef.current} width={280} height={280} color={isPlaying ? visualizerColor : "#cbd5e1"} />
          )}
 
          {/* Frequency Readout Overlay */}
