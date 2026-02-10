@@ -33,26 +33,34 @@ export default function WaveformVisualizer({ analyser, width = 300, height = 300
       ctx.shadowColor = color;
       ctx.strokeStyle = color;
 
-      ctx.beginPath();
+      // Smooth waveform using quadratic curves
+      // Reduce sample rate for smoother appearance
+      const step = 4; // Sample every 4th point for smoothness
+      const points: { x: number; y: number }[] = [];
 
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
+      for (let i = 0; i < bufferLength; i += step) {
         const v = dataArray[i] / 128.0;
         const y = (v * canvas.height) / 2;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
+        const x = (i / bufferLength) * canvas.width;
+        points.push({ x, y });
       }
 
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
+      if (points.length > 2) {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+
+        // Draw smooth curves through points using quadratic bezier
+        for (let i = 1; i < points.length - 1; i++) {
+          const xMid = (points[i].x + points[i + 1].x) / 2;
+          const yMid = (points[i].y + points[i + 1].y) / 2;
+          ctx.quadraticCurveTo(points[i].x, points[i].y, xMid, yMid);
+        }
+
+        // Draw the last segment
+        const lastPoint = points[points.length - 1];
+        ctx.lineTo(lastPoint.x, lastPoint.y);
+        ctx.stroke();
+      }
     };
 
     draw();
