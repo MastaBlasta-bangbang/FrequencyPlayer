@@ -35,13 +35,16 @@ interface FrequencyPreset {
 }
 
 const FREQUENCY_PRESETS: FrequencyPreset[] = [
-    // Solfeggio frequencies
+    // Solfeggio frequencies (complete scale)
+    { label: "174", frequency: 174, category: 'solfeggio', description: "Pain Relief" },
+    { label: "285", frequency: 285, category: 'solfeggio', description: "Healing" },
     { label: "396", frequency: 396, category: 'solfeggio', description: "Liberation" },
     { label: "417", frequency: 417, category: 'solfeggio', description: "Change" },
     { label: "528", frequency: 528, category: 'solfeggio', description: "Miracles" },
     { label: "639", frequency: 639, category: 'solfeggio', description: "Connection" },
     { label: "741", frequency: 741, category: 'solfeggio', description: "Expression" },
     { label: "852", frequency: 852, category: 'solfeggio', description: "Intuition" },
+    { label: "963", frequency: 963, category: 'solfeggio', description: "Crown" },
     // Rose frequencies (power of 2)
     { label: "32", frequency: 32, category: 'rose' },
     { label: "64", frequency: 64, category: 'rose' },
@@ -50,6 +53,8 @@ const FREQUENCY_PRESETS: FrequencyPreset[] = [
     { label: "512", frequency: 512, category: 'rose' },
     { label: "1024", frequency: 1024, category: 'rose' },
     // Special frequencies
+    { label: "Schumann", frequency: 7.83, category: 'special', description: "Earth" },
+    { label: "40Hz", frequency: 40, category: 'special', description: "Gamma" },
     { label: "Om", frequency: 136.1, category: 'special', description: "Cosmic Om" },
     { label: "432", frequency: 432, category: 'special', description: "Verdi A" },
 ];
@@ -71,6 +76,7 @@ const BRAINWAVES = [
     { label: "Theta", freq: 6.0, desc: "Meditation" },
     { label: "Alpha", freq: 10.0, desc: "Relaxation" },
     { label: "Beta", freq: 20.0, desc: "Focus" },
+    { label: "Gamma", freq: 40.0, desc: "Peak Awareness" },
 ];
 
 // ==========================================
