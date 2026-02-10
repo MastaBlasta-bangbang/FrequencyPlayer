@@ -43,12 +43,15 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         maxAmplitude = Math.max(maxAmplitude, amplitude);
       }
 
-      // Dynamic scaling: larger base size with more aggressive scaling for powerful tones
-      // Keep the size big but prevent border clipping
+      // Dynamic scaling: larger base size with very aggressive scaling for powerful tones
+      // Keep the size big but prevent border clipping completely
       const baseScale = Math.min(canvas.width, canvas.height) * 0.38;
-      // More aggressive threshold (0.7 instead of 0.85) to catch Temple Drone & Warm String
-      const amplitudeScale = maxAmplitude > 0.7 ? 0.7 / maxAmplitude : 1.0;
+      // Very aggressive threshold (0.6) and scaling (0.55) for Temple Drone & Warm String
+      const amplitudeScale = maxAmplitude > 0.6 ? 0.55 / maxAmplitude : 1.0;
       const adaptiveScale = baseScale * amplitudeScale;
+
+      // Add safety clamping to absolutely prevent border hits
+      const maxSafeOffset = adaptiveScale * 0.95;
 
       ctx.beginPath();
 
@@ -61,9 +64,13 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         const xSample = dataArray[i];
         const ySample = dataArray[i + halfBuffer];
 
-        // Normalize to -1..1 with adaptive scaling
-        const x = ((xSample / 128.0) - 1.0) * adaptiveScale;
-        const y = ((ySample / 128.0) - 1.0) * adaptiveScale;
+        // Normalize to -1..1 with adaptive scaling and hard clamping
+        const xRaw = ((xSample / 128.0) - 1.0) * adaptiveScale;
+        const yRaw = ((ySample / 128.0) - 1.0) * adaptiveScale;
+
+        // Clamp to prevent any border hits
+        const x = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, xRaw));
+        const y = Math.max(-maxSafeOffset, Math.min(maxSafeOffset, yRaw));
 
         const plotX = centerX + x;
         const plotY = centerY + y;
