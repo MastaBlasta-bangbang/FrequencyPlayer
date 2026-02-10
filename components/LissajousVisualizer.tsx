@@ -43,11 +43,11 @@ export default function LissajousVisualizer({ analyser, width = 300, height = 30
         maxAmplitude = Math.max(maxAmplitude, amplitude);
       }
 
-      // Dynamic scaling: reduce scale when amplitude is high (like Warm String, Temple Drone)
-      // Base scale is conservative, and we scale down further based on peak amplitude
-      const baseScale = Math.min(canvas.width, canvas.height) * 0.25;
-      const amplitudeScale = maxAmplitude > 0.5 ? 0.5 / maxAmplitude : 1.0; // Clamp when too loud
-      const adaptiveScale = baseScale * amplitudeScale * 0.7;
+      // Dynamic scaling: larger base size, only scale down when truly necessary
+      // Start big, only reduce for extremely powerful tones
+      const baseScale = Math.min(canvas.width, canvas.height) * 0.38;
+      const amplitudeScale = maxAmplitude > 0.85 ? 0.85 / maxAmplitude : 1.0; // Only clamp at high volumes
+      const adaptiveScale = baseScale * amplitudeScale;
 
       ctx.beginPath();
 
