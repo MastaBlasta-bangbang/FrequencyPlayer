@@ -101,6 +101,7 @@ interface SessionTemplate {
 }
 
 const STORAGE_KEY = 'meditation-templates';
+const SETTINGS_STORAGE_KEY = 'meditation-app-settings';
 
 // SOLFEGGIO removed - now using FREQUENCY_PRESETS
 
@@ -157,6 +158,10 @@ export default function Home() {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
+
+  // App settings (for modal)
+  const [defaultFrequencyInput, setDefaultFrequencyInput] = useState('432');
+  const [defaultTone, setDefaultTone] = useState('Healing Pad');
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -315,6 +320,25 @@ export default function Home() {
       };
   }, [sessionTimerActive, isPlaying]);
 
+  // Sync defaultFrequencyInput with freq changes from main controls
+  useEffect(() => {
+      setDefaultFrequencyInput(String(freq));
+  }, [freq]);
+
+  // Sync defaultTone with activeSoundPreset changes
+  useEffect(() => {
+      setDefaultTone(activeSoundPreset);
+  }, [activeSoundPreset]);
+
+  // Auto-save settings when freq or preset changes (debounced via timeout)
+  useEffect(() => {
+      const timeoutId = setTimeout(() => {
+          saveAppSettings();
+      }, 500); // Debounce 500ms to avoid too many writes
+
+      return () => clearTimeout(timeoutId);
+  }, [freq, activeSoundPreset]);
+
   // Callback from SessionTimer to notify about session status
   const handleSessionStatusChange = useCallback((isReady: boolean, startHandler: (() => void) | null) => {
       setHasActiveSession(isReady);
@@ -396,16 +420,35 @@ export default function Home() {
       loadSoundPreset(newP);
   };
 
-  // Load templates from localStorage on mount
+  // Load templates and app settings from localStorage on mount
   useEffect(() => {
       try {
+          // Load templates
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) {
               const templates = JSON.parse(stored) as SessionTemplate[];
               setSavedTemplates(templates);
           }
+
+          // Load app settings
+          const settingsStored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+          if (settingsStored) {
+              const settings = JSON.parse(settingsStored);
+
+              // Apply default frequency
+              if (settings.defaultFrequency) {
+                  setFreq(settings.defaultFrequency);
+                  setDefaultFrequencyInput(String(settings.defaultFrequency));
+              }
+
+              // Apply default tone preset name
+              if (settings.defaultTone) {
+                  setDefaultTone(settings.defaultTone);
+                  setActiveSoundPreset(settings.defaultTone);
+              }
+          }
       } catch (err) {
-          console.error('Failed to load templates:', err);
+          console.error('Failed to load settings:', err);
       }
   }, []);
 
@@ -487,6 +530,46 @@ export default function Home() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
+  // Save app settings to localStorage
+  const saveAppSettings = () => {
+      try {
+          const settings = {
+              defaultFrequency: freq,
+              defaultTone: activeSoundPreset,
+          };
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      } catch (err) {
+          console.error('Failed to save settings:', err);
+      }
+  };
+
+  // Apply default tone from settings modal
+  const applyDefaultTone = (presetLabel: string) => {
+      setDefaultTone(presetLabel);
+      const preset = SOUND_PRESETS.find(p => p.label === presetLabel);
+      if (preset) {
+          loadSoundPreset(preset);
+          saveAppSettings();
+      }
+  };
+
+  // Apply default frequency from settings modal (manual input)
+  const applyDefaultFrequencyInput = () => {
+      const val = parseFloat(defaultFrequencyInput);
+      if (!isNaN(val) && val >= 20 && val <= 2000) {
+          loadFrequencyPreset(val);
+          saveAppSettings();
+      }
+  };
+
+  // Apply frequency from preset selector in modal
+  const applyFrequencyPreset = (frequency: number) => {
+      loadFrequencyPreset(frequency);
+      setDefaultFrequencyInput(String(frequency));
+      setShowPresetSelector(false);
+      saveAppSettings();
+  };
+
   return (
     <Page className="bg-gradient-to-b from-slate-50 to-slate-100">
       <Navbar
@@ -528,7 +611,11 @@ export default function Home() {
               {/* Default Tone */}
               <div>
                 <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Tone</label>
-                <select className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                <select
+                  value={defaultTone}
+                  onChange={(e) => applyDefaultTone(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
                   {SOUND_PRESETS.map(p => (
                     <option key={p.label} value={p.label}>{p.label}</option>
                   ))}
@@ -539,7 +626,22 @@ export default function Home() {
               <div>
                 <label className="text-sm font-semibold text-slate-700 mb-2 block">Default START Frequency</label>
                 <div className="flex gap-2">
-                  <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" defaultValue={freq} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <input
+                    type="number"
+                    min="20"
+                    max="2000"
+                    step="0.1"
+                    placeholder="Hz"
+                    value={defaultFrequencyInput}
+                    onChange={(e) => setDefaultFrequencyInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        applyDefaultFrequencyInput();
+                      }
+                    }}
+                    onBlur={applyDefaultFrequencyInput}
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  />
                   <button onClick={() => setShowPresetSelector(!showPresetSelector)} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">
                     Select from Presets
                   </button>
@@ -553,7 +655,7 @@ export default function Home() {
                           {FREQUENCY_PRESETS.filter(f => f.category === cat).map(f => (
                             <button
                               key={f.label}
-                              onClick={() => { loadFrequencyPreset(f.frequency); setShowPresetSelector(false); }}
+                              onClick={() => applyFrequencyPreset(f.frequency)}
                               className="px-2 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-violet-100"
                             >
                               {f.label} ({f.frequency}Hz)
