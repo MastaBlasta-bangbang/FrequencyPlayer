@@ -1,10 +1,13 @@
 'use client';
 import { App } from 'konsta/react';
+import { LanguageProvider } from '@/lib/i18n';
 
 export default function KonstaProvider({ children }: { children: React.ReactNode }) {
   return (
-    <App theme="ios">
-      {children}
-    </App>
+    <LanguageProvider>
+      <App theme="ios">
+        {children}
+      </App>
+    </LanguageProvider>
   );
 }

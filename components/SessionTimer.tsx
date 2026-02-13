@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Play, Pause, Square, Plus, X, ChevronDown, ChevronUp, ListMusic, Clock } from 'lucide-react';
 import { Toggle } from 'konsta/react';
+import { useLanguage } from '@/lib/i18n';
 
 interface FrequencyPreset {
     label: string;
@@ -53,6 +54,7 @@ export default function SessionTimer({
     onSessionStatusChange,
     className = '',
 }: SessionTimerProps) {
+    const { t } = useLanguage();
     const [isExpanded, setIsExpanded] = useState(false);
     const [mode, setMode] = useState<SessionMode>('sequence'); // Default to sequence only
     const [totalDuration, setTotalDuration] = useState(180); // 3 minutes default
@@ -225,15 +227,15 @@ export default function SessionTimer({
                         <Timer size={20} />
                     </div>
                     <div className="text-left">
-                        <h3 className="text-sm font-semibold text-slate-700">Create a Sequence</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('createSequence')}</h3>
                         <p className="text-xs text-slate-500">
                             {isActive
-                                ? `${formatTime(effectiveDuration - elapsedSeconds)} remaining`
+                                ? `${formatTime(effectiveDuration - elapsedSeconds)} ${t('remaining')}`
                                 : mode === 'single'
                                     ? formatTime(totalDuration)
                                     : segments.length > 0
-                                        ? `${segments.length} frequencies, ${formatTime(sequenceDuration)}`
-                                        : 'Build a sequence'
+                                        ? `${segments.length} ${t('frequenciesCount')}, ${formatTime(sequenceDuration)}`
+                                        : t('buildSequence')
                             }
                         </p>
                     </div>
@@ -299,7 +301,7 @@ export default function SessionTimer({
                             {/* Current sequence */}
                             {segments.length > 0 && (
                                 <div className="space-y-2">
-                                    <label className="text-xs text-slate-500">Sequence ({formatTime(sequenceDuration)} total)</label>
+                                    <label className="text-xs text-slate-500">{t('sequence')} ({formatTime(sequenceDuration)} {t('total')})</label>
 
                                     {/* Visual timeline */}
                                     <div className="h-4 rounded-full overflow-hidden flex">
@@ -320,7 +322,7 @@ export default function SessionTimer({
                                     {/* Auto-distribute controls */}
                                     <div className="mb-3 p-3 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200">
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-violet-700">Auto-distribute time</span>
+                                            <span className="text-xs font-semibold text-violet-700">{t('autoDistributeTime')}</span>
                                             <Toggle
                                                 checked={autoDistribute}
                                                 onChange={() => setAutoDistribute(!autoDistribute)}
@@ -337,13 +339,13 @@ export default function SessionTimer({
                                                         onChange={(e) => setTargetSequenceDuration(parseInt(e.target.value || '10') * 60)}
                                                         className="w-16 bg-white border border-violet-300 rounded-lg px-2 py-1 text-sm text-center"
                                                     />
-                                                    <span className="text-xs text-violet-600">minutes total</span>
+                                                    <span className="text-xs text-violet-600">{t('minutesTotal')}</span>
                                                 </div>
                                                 <button
                                                     onClick={distributeTimeEvenly}
                                                     className="w-full py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs font-medium transition-colors"
                                                 >
-                                                    Distribute {Math.floor(targetSequenceDuration / segments.length)} sec per frequency
+                                                    {t('distribute')} {Math.floor(targetSequenceDuration / segments.length)} {t('secPerFrequency')}
                                                 </button>
                                             </div>
                                         )}
@@ -363,7 +365,7 @@ export default function SessionTimer({
                                                     />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="text-sm font-medium text-slate-700 truncate">
-                                                            {seg.frequencyLabel} Hz
+                                                            {seg.frequencyLabel} {t('hz')}
                                                         </div>
                                                     </div>
                                                     <button
@@ -411,9 +413,9 @@ export default function SessionTimer({
                                                             }
                                                         }}
                                                         className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-center"
-                                                        placeholder="seconds"
+                                                        placeholder={t('seconds')}
                                                     />
-                                                    <span className="text-xs text-slate-400">sec</span>
+                                                    <span className="text-xs text-slate-400">{t('sec')}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -424,12 +426,12 @@ export default function SessionTimer({
                             {/* Add frequencies - grouped by category */}
                             <div>
                                 <label className="text-xs text-slate-500 mb-2 block flex items-center gap-1">
-                                    <Plus size={12} /> Add to sequence
+                                    <Plus size={12} /> {t('addToSequence')}
                                 </label>
 
                                 {/* Solfeggio */}
                                 <div className="mb-2">
-                                    <span className="text-[10px] text-violet-500 font-semibold uppercase tracking-wider">Solfeggio</span>
+                                    <span className="text-[10px] text-violet-500 font-semibold uppercase tracking-wider">{t('solfeggio')}</span>
                                     <div className="flex flex-wrap gap-1.5 mt-1">
                                         {frequencyPresets.filter(f => f.category === 'solfeggio').map(f => (
                                             <button
@@ -445,7 +447,7 @@ export default function SessionTimer({
 
                                 {/* Rose */}
                                 <div className="mb-2">
-                                    <span className="text-[10px] text-rose-500 font-semibold uppercase tracking-wider">Rose</span>
+                                    <span className="text-[10px] text-rose-500 font-semibold uppercase tracking-wider">{t('rose')}</span>
                                     <div className="flex flex-wrap gap-1.5 mt-1">
                                         {frequencyPresets.filter(f => f.category === 'rose').map(f => (
                                             <button
@@ -461,7 +463,7 @@ export default function SessionTimer({
 
                                 {/* Special */}
                                 <div>
-                                    <span className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">Special</span>
+                                    <span className="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">{t('special')}</span>
                                     <div className="flex flex-wrap gap-1.5 mt-1">
                                         {frequencyPresets.filter(f => f.category === 'special').map(f => (
                                             <button
@@ -485,12 +487,12 @@ export default function SessionTimer({
                             className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                         >
                             <Play size={18} fill="currentColor" />
-                            Start Sequence
+                            {t('startSequence')}
                         </button>
                     )}
                     {!isActive && segments.length === 0 && (
                         <div className="text-center py-3 text-slate-400 text-sm">
-                            Add frequencies to your sequence
+                            {t('addFrequenciesToSequence')}
                         </div>
                     )}
                 </div>

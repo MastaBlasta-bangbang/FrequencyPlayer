@@ -7,11 +7,12 @@ import {
   BlockTitle,
   Toggle
 } from 'konsta/react';
-import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown, Settings } from 'lucide-react';
+import { Play, Square, Leaf, AudioWaveform, Music, Landmark, Infinity, Save, FolderOpen, Trash2, ChevronUp, ChevronDown, Settings, Globe } from 'lucide-react';
 import CymaticRing from '@/components/CymaticRing';
 import WaveformVisualizer from '@/components/WaveformVisualizer';
 import LissajousVisualizer from '@/components/LissajousVisualizer';
 import SessionTimer from '@/components/SessionTimer';
+import { useLanguage, LANGUAGES, Language } from '@/lib/i18n';
 
 // ==========================================
 // PRESETS - Sound presets (NO frequency - that's separate)
@@ -114,6 +115,7 @@ const SETTINGS_STORAGE_KEY = 'meditation-app-settings';
 // SOLFEGGIO removed - now using FREQUENCY_PRESETS
 
 export default function Home() {
+  const { t, language, setLanguage } = useLanguage();
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeSoundPreset, setActiveSoundPreset] = useState("Healing Pad");
@@ -606,6 +608,41 @@ export default function Home() {
       saveAppSettings();
   };
 
+  const getDesc = (desc?: string) => {
+    if (!desc) return t('hz');
+    const map: Record<string, string> = {
+      // Frequency Descriptions
+      "Pain Relief": "painRelief",
+      "Healing": "healing",
+      "Liberation": "liberation",
+      "Change": "change",
+      "Miracles": "miracles",
+      "Connection": "connection",
+      "Expression": "expression",
+      "Intuition": "intuition",
+      "Crown": "crown",
+      "Earth": "earth",
+      "Gamma": "gamma",
+      "Cosmic Om": "cosmicOm",
+      "Verdi A": "verdiA",
+      // Brainwave Descriptions
+      "Deep Sleep": "deepSleep",
+      "Meditation": "meditation",
+      "Relaxation": "relaxation",
+      "Focus": "focus",
+      "Peak Awareness": "peakAwareness",
+      // Tone Labels
+      "Healing Pad": "healingPad",
+      "Pure Sine": "pureSine",
+      "Warm String": "warmString",
+      "Temple Drone": "templeDrone",
+      "Deep Om": "deepOm",
+    };
+    // fallback to text if not found (e.g. Delta)
+    const key = map[desc];
+    return key ? t(key as any) : desc;
+  };
+
   return (
     <Page className="bg-gradient-to-b from-slate-50 to-slate-100">
       <Navbar
@@ -628,25 +665,44 @@ export default function Home() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowSettingsModal(false)}>
           <div className="glass-card rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-800">App Settings</h2>
+              <h2 className="text-xl font-bold text-slate-800">{t('appSettings')}</h2>
               <button onClick={() => setShowSettingsModal(false)} className="p-1 hover:bg-slate-200 rounded-full">
                 <ChevronDown size={20} />
               </button>
             </div>
 
             <div className="space-y-4">
+              {/* Language Selector */}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block flex items-center gap-2">
+                  <Globe size={16} />
+                  {t('language')}
+                </label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as Language)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+                    <option key={lang} value={lang}>
+                      {LANGUAGES[lang]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Default Session Length */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Session Length</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('defaultSessionLength')}</label>
                 <div className="flex gap-2">
-                  <input type="number" min="1" max="120" placeholder="Minutes" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600">Save</button>
+                  <input type="number" min="1" max="120" placeholder={t('minutes')} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600">{t('save')}</button>
                 </div>
               </div>
 
               {/* Default Tone */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default Tone</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('defaultTone')}</label>
                 <select
                   value={defaultTone}
                   onChange={(e) => applyDefaultTone(e.target.value)}
@@ -660,14 +716,14 @@ export default function Home() {
 
               {/* Default START Frequency */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Default START Frequency</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('defaultStartFrequency')}</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     min="20"
                     max="2000"
                     step="0.1"
-                    placeholder="Hz"
+                    placeholder={t('hz')}
                     value={defaultFrequencyInput}
                     onChange={(e) => setDefaultFrequencyInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -679,14 +735,14 @@ export default function Home() {
                     className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
                   />
                   <button onClick={() => setShowPresetSelector(!showPresetSelector)} className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">
-                    Select from Presets
+                    {t('selectFromPresets')}
                   </button>
                 </div>
                 {showPresetSelector && (
                   <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 max-h-48 overflow-y-auto">
                     {(['solfeggio', 'rose', 'special'] as FrequencyCategory[]).map(cat => (
                       <div key={cat} className="mb-3">
-                        <div className="text-xs font-semibold text-slate-600 uppercase mb-1">{cat}</div>
+                        <div className="text-xs font-semibold text-slate-600 uppercase mb-1">{t(cat as any)}</div>
                         <div className="flex flex-wrap gap-1">
                           {FREQUENCY_PRESETS.filter(f => f.category === cat).map(f => (
                             <button
@@ -706,37 +762,37 @@ export default function Home() {
 
               {/* Add Custom Frequency */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Add Custom Frequency to Special</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('addCustomFrequency')}</label>
                 <div className="flex gap-2">
-                  <input type="number" min="20" max="2000" step="0.1" placeholder="Hz" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <input type="text" placeholder="Label" className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <button className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">Add</button>
+                  <input type="number" min="20" max="2000" step="0.1" placeholder={t('hz')} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <input type="text" placeholder={t('label')} className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  <button className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-medium hover:bg-violet-600">{t('add')}</button>
                 </div>
               </div>
 
               {/* Binaural Always On */}
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700">Binaural Always On</label>
+                <label className="text-sm font-semibold text-slate-700">{t('binauralAlwaysOn')}</label>
                 <Toggle checked={binauralOn} onChange={() => setBinauralOn(!binauralOn)} />
               </div>
 
               {/* Visualizer Type */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Visualizer Style</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('visualizerStyle')}</label>
                 <select
                   value={visualizerType}
                   onChange={(e) => setVisualizerType(e.target.value as any)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 >
-                  <option value="cymatic">Cymatic Ring</option>
-                  <option value="waveform">Classic Waveform</option>
-                  <option value="lissajous">Lissajous Curve</option>
+                  <option value="cymatic">{t('cymaticRing')}</option>
+                  <option value="waveform">{t('classicWaveform')}</option>
+                  <option value="lissajous">{t('lissajousCurve')}</option>
                 </select>
               </div>
 
               {/* Visualizer Color */}
               <div>
-                <label className="text-sm font-semibold text-slate-700 mb-2 block">Visualizer Color</label>
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">{t('visualizerColor')}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { name: 'Cyan', color: '#0891b2' },
@@ -766,7 +822,7 @@ export default function Home() {
             </div>
 
             <button onClick={() => setShowSettingsModal(false)} className="w-full mt-6 py-3 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900">
-              Close Settings
+              {t('closeSettings')}
             </button>
           </div>
         </div>
@@ -788,11 +844,11 @@ export default function Home() {
          {/* Frequency Readout Overlay */}
          <div className="absolute flex flex-col items-center pointer-events-none">
             <h1 className={`text-5xl font-light tracking-tight transition-all duration-700 ${isPlaying ? "text-slate-800" : "text-slate-400"}`}>
-              {freq.toFixed(1)} <span className="text-sm text-slate-400 font-normal tracking-widest">Hz</span>
+              {freq.toFixed(1)} <span className="text-sm text-slate-400 font-normal tracking-widest">{t('hz')}</span>
             </h1>
             {binauralOn && (
                 <div className="text-xs text-emerald-600 tracking-[0.15em] mt-2 font-medium">
-                    BINAURAL {beatFreq} Hz
+                    {t('binaural')} {beatFreq} {t('hz')}
                 </div>
             )}
          </div>
@@ -833,7 +889,7 @@ export default function Home() {
             {/* Context indicators */}
             {!isReady && (
                 <div className="mt-2 px-3 py-1 bg-slate-400/90 backdrop-blur-sm rounded-full text-white text-xs font-medium shadow-lg animate-pulse">
-                    Initializing...
+                    {t('initializing')}
                 </div>
             )}
             {hasActiveSession && !isPlaying && isReady && (
@@ -850,7 +906,7 @@ export default function Home() {
                   onClick={() => setSettingsOpen(true)}
                   className="px-6 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg flex items-center gap-2 text-slate-600 hover:text-violet-600 hover:border-violet-300 transition-all text-sm font-medium"
                >
-                  <span>Settings</span>
+                  <span>{t('settings')}</span>
                   <ChevronUp size={16} />
                </button>
             </div>
@@ -868,7 +924,7 @@ export default function Home() {
                         onClick={() => setFrequenciesExpanded(!frequenciesExpanded)}
                         className="w-full flex items-center justify-between mb-2"
                      >
-                        <h3 className="text-sm font-semibold text-slate-700">Frequencies</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('frequencies')}</h3>
                         {frequenciesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                      </button>
 
@@ -885,7 +941,7 @@ export default function Home() {
                                        ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md'
                                        : 'bg-slate-100 text-slate-500 hover:text-violet-600'}`}
                                  >
-                                    {cat}
+                                    {t(cat as any)}
                                  </button>
                               ))}
                            </div>
@@ -905,7 +961,7 @@ export default function Home() {
                                  >
                                     <span className="text-base font-bold">{f.label}</span>
                                     <span className="text-[8px] uppercase tracking-wider opacity-70 text-center leading-tight">
-                                       {f.description || 'Hz'}
+                                       {getDesc(f.description)}
                                     </span>
                                  </button>
                               ))}
@@ -914,7 +970,7 @@ export default function Home() {
                            {/* Custom Frequency Input - Compact */}
                            {frequencyCategory === 'special' && (
                               <div className="pt-2 border-t border-slate-200">
-                                 <label className="text-[10px] text-slate-500 mb-1 block">Custom Hz</label>
+                                 <label className="text-[10px] text-slate-500 mb-1 block">{t('customHz')}</label>
                                  <div className="flex gap-1.5">
                                     <input
                                        type="number"
@@ -923,7 +979,7 @@ export default function Home() {
                                        step="0.1"
                                        value={customFrequency}
                                        onChange={(e) => setCustomFrequency(e.target.value)}
-                                       placeholder="Enter Hz..."
+                                       placeholder={t('hz') + "..."}
                                        className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
                                     />
                                     <button
@@ -936,7 +992,7 @@ export default function Home() {
                                        }}
                                        className="px-3 py-1.5 bg-violet-500 text-white rounded-lg text-xs font-medium hover:bg-violet-600"
                                     >
-                                       Set
+                                       {t('set')}
                                     </button>
                                  </div>
                               </div>
@@ -945,7 +1001,7 @@ export default function Home() {
                            {/* Binaural Entrainment - Integrated */}
                            <div className="pt-2 border-t border-slate-200">
                               <div className="flex items-center justify-between mb-2">
-                                 <label className="text-sm font-semibold text-slate-700">Binaural Entrainment</label>
+                                 <label className="text-sm font-semibold text-slate-700">{t('binauralEntrainment')}</label>
                                  <Toggle
                                     checked={binauralOn}
                                     onChange={() => {
@@ -969,8 +1025,8 @@ export default function Home() {
                                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400 text-white shadow-sm'
                                              : 'bg-white border-slate-200 text-slate-600'}`}
                                        >
-                                          <div className="text-xs font-bold">{w.label} {w.freq} Hz</div>
-                                          <div className="text-xs opacity-70">{w.desc}</div>
+                                          <div className="text-xs font-bold">{w.label} {w.freq} {t('hz')}</div>
+                                          <div className="text-xs opacity-70">{getDesc(w.desc)}</div>
                                        </button>
                                     ))}
                                  </div>
@@ -986,7 +1042,7 @@ export default function Home() {
                         onClick={() => setToneExpanded(!toneExpanded)}
                         className="w-full flex items-center justify-between"
                      >
-                        <h3 className="text-sm font-semibold text-slate-700">Tone</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('tone')}</h3>
                         {toneExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                      </button>
 
@@ -1004,7 +1060,7 @@ export default function Home() {
                                  <span className="mb-1">
                                     {PRESET_ICONS[p.icon]}
                                  </span>
-                                 <span className="text-[9px] font-medium leading-tight text-center">{p.label}</span>
+                                 <span className="text-[9px] font-medium leading-tight text-center">{getDesc(p.label)}</span>
                               </button>
                            ))}
                         </div>
@@ -1017,14 +1073,14 @@ export default function Home() {
                         onClick={() => setSessionTimerExpanded(!sessionTimerExpanded)}
                         className="w-full flex items-center justify-between"
                      >
-                        <h3 className="text-sm font-semibold text-slate-700">Session Timer</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('sessionTimer')}</h3>
                         {sessionTimerExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                      </button>
 
                      {sessionTimerExpanded && (
                         <div className="space-y-2 mt-2">
                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-slate-600">Enable Timer</span>
+                              <span className="text-xs text-slate-600">{t('enableTimer')}</span>
                               <Toggle checked={sessionTimerEnabled} onChange={() => setSessionTimerEnabled(!sessionTimerEnabled)} />
                            </div>
                            <div className="flex gap-1.5">
@@ -1049,7 +1105,7 @@ export default function Home() {
                            <input
                               type="number"
                               min="1"
-                              placeholder="Custom minutes"
+                              placeholder={t('customMinutes')}
                               onKeyDown={(e) => {
                                  if (e.key === 'Enter') {
                                     const val = parseInt(e.currentTarget.value);
@@ -1071,7 +1127,7 @@ export default function Home() {
                         onClick={() => setSequenceBuilderExpanded(!sequenceBuilderExpanded)}
                         className="w-full flex items-center justify-between"
                      >
-                        <h3 className="text-sm font-semibold text-slate-700">Sequence Builder</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('sequenceBuilder')}</h3>
                         {sequenceBuilderExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                      </button>
 
@@ -1086,7 +1142,7 @@ export default function Home() {
                                  }}
                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
                               >
-                                 <option value="">Load Template...</option>
+                                 <option value="">{t('loadTemplate')}</option>
                                  {savedTemplates.map(t => (
                                     <option key={t.id} value={t.id}>{t.name}</option>
                                  ))}
@@ -1110,7 +1166,7 @@ export default function Home() {
                               className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all"
                            >
                               <Save size={14} />
-                              Save as Template
+                              {t('saveAsTemplate')}
                            </button>
 
                            {/* Save Dialog */}
@@ -1118,24 +1174,24 @@ export default function Home() {
                               <div className="p-2 bg-white rounded-lg border border-amber-200 space-y-2">
                                  <input
                                     type="text"
-                                    placeholder="Name (required)"
+                                    placeholder={t('nameRequired')}
                                     value={templateName}
                                     onChange={(e) => setTemplateName(e.target.value)}
                                     className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs"
                                  />
                                  <input
                                     type="text"
-                                    placeholder="Description (optional)"
+                                    placeholder={t('descriptionOptional')}
                                     value={templateDescription}
                                     onChange={(e) => setTemplateDescription(e.target.value)}
                                     className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs"
                                  />
                                  <div className="flex gap-2">
                                     <button onClick={saveTemplate} className="flex-1 py-1.5 bg-amber-500 text-white rounded text-xs font-medium">
-                                       Save
+                                       {t('save')}
                                     </button>
                                     <button onClick={() => { setShowTemplateDialog(false); setTemplateName(''); setTemplateDescription(''); }} className="flex-1 py-1.5 bg-slate-200 text-slate-600 rounded text-xs font-medium">
-                                       Cancel
+                                       {t('cancel')}
                                     </button>
                                  </div>
                               </div>
@@ -1151,7 +1207,7 @@ export default function Home() {
                      onClick={() => setSettingsOpen(false)}
                      className="px-4 py-1 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                     Hide ↓
+                     {t('hide')}
                   </button>
                </div>
             </div>

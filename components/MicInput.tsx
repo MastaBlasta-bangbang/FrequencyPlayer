@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
 import { autoCorrelate, noteFromPitch, getCentsOff, PitchSmoother } from '@/lib/pitchDetection';
+import { useLanguage } from '@/lib/i18n';
 
 interface MicInputProps {
     onPitchDetected?: (frequency: number, note: string) => void;
@@ -10,6 +11,7 @@ interface MicInputProps {
 }
 
 export default function MicInput({ onPitchDetected, className = '' }: MicInputProps) {
+    const { t } = useLanguage();
     const [isEnabled, setIsEnabled] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -168,9 +170,9 @@ export default function MicInput({ onPitchDetected, className = '' }: MicInputPr
                         {isEnabled ? <Mic size={20} /> : <MicOff size={20} />}
                     </div>
                     <div className="text-left">
-                        <h3 className="text-sm font-semibold text-slate-700">Microphone Input</h3>
+                        <h3 className="text-sm font-semibold text-slate-700">{t('microphoneInput')}</h3>
                         <p className="text-xs text-slate-500">
-                            {isEnabled ? `${detectedFreq.toFixed(1)} Hz` : 'Tap to expand'}
+                            {isEnabled ? `${detectedFreq.toFixed(1)} ${t('hz')}` : t('tapToExpand')}
                         </p>
                     </div>
                 </div>
@@ -192,7 +194,7 @@ export default function MicInput({ onPitchDetected, className = '' }: MicInputPr
                 <div className="px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Enable toggle */}
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">Enable Microphone</span>
+                        <span className="text-sm text-slate-600">{t('enableMicrophone')}</span>
                         <button
                             onClick={toggleMic}
                             className={`relative w-12 h-6 rounded-full transition-colors ${isEnabled ? 'bg-rose-500' : 'bg-slate-300'}`}
@@ -203,7 +205,7 @@ export default function MicInput({ onPitchDetected, className = '' }: MicInputPr
 
                     {/* Device selector */}
                     <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Input Device</label>
+                        <label className="text-xs text-slate-500 mb-1 block">{t('inputDevice')}</label>
                         <select
                             value={selectedDeviceId}
                             onChange={(e) => setSelectedDeviceId(e.target.value)}
@@ -220,7 +222,7 @@ export default function MicInput({ onPitchDetected, className = '' }: MicInputPr
                     {/* Gain slider */}
                     <div>
                         <div className="flex justify-between text-xs text-slate-500 mb-1">
-                            <span className="flex items-center gap-1"><Volume2 size={12} /> Gain</span>
+                            <span className="flex items-center gap-1"><Volume2 size={12} /> {t('gain')}</span>
                             <span className="font-mono">{gain.toFixed(1)}x</span>
                         </div>
                         <input
@@ -239,7 +241,7 @@ export default function MicInput({ onPitchDetected, className = '' }: MicInputPr
                         <div className="text-center py-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl">
                             <div className="text-4xl font-light text-slate-800 tracking-tight">
                                 {detectedFreq.toFixed(1)}
-                                <span className="text-sm text-slate-400 ml-1">Hz</span>
+                                <span className="text-sm text-slate-400 ml-1">{t('hz')}</span>
                             </div>
                             <div className="text-5xl font-bold text-slate-700 mt-2">{detectedNote}</div>
                             <div className={`mt-2 text-sm font-mono ${Math.abs(centsOff) < 5 ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
